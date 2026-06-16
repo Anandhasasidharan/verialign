@@ -41,11 +41,15 @@ class TestCreateTraceStore:
         assert isinstance(store, TraceStore)
 
     def test_postgres_returns_async_store(self):
-        store = create_trace_store("postgresql+asyncpg://user:pass@localhost:5432/verialign")
+        store = create_trace_store(
+            "postgresql+asyncpg://user:pass@localhost:5432/verialign"
+        )
         assert isinstance(store, AsyncTraceStore)
 
     def test_mysql_returns_async_store(self):
-        store = create_trace_store("mysql+aiomysql://user:pass@localhost:3306/verialign")
+        store = create_trace_store(
+            "mysql+aiomysql://user:pass@localhost:3306/verialign"
+        )
         assert isinstance(store, AsyncTraceStore)
 
     def test_redact_passed_to_sync_store(self):
@@ -57,7 +61,9 @@ class TestCreateTraceStore:
         assert store.redact is True
 
     def test_db_path_ignored_for_async(self):
-        store = create_trace_store("postgresql+asyncpg://u:p@h/db", db_path="./ignored.db")
+        store = create_trace_store(
+            "postgresql+asyncpg://u:p@h/db", db_path="./ignored.db"
+        )
         assert isinstance(store, AsyncTraceStore)
         assert store.database_url == "postgresql+asyncpg://u:p@h/db"
 

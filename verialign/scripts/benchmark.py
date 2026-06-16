@@ -41,7 +41,10 @@ async def run_benchmark(
             "messages": [{"role": "user", "content": f"Test request {request_id}"}],
             "metadata": {
                 "context": [
-                    {"id": "doc-1", "text": "This is a test context for benchmarking VeriAlign performance."}
+                    {
+                        "id": "doc-1",
+                        "text": "This is a test context for benchmarking VeriAlign performance.",
+                    }
                 ]
             },
             "temperature": 0.7,
@@ -51,14 +54,18 @@ async def run_benchmark(
         async with semaphore:
             start = time.perf_counter()
             try:
-                response = await session.post(f"{base_url}/v1/chat/completions", json=payload, timeout=30.0)
+                response = await session.post(
+                    f"{base_url}/v1/chat/completions", json=payload, timeout=30.0
+                )
                 elapsed = (time.perf_counter() - start) * 1000
                 if response.status_code == 200:
                     successful += 1
                     latencies.append(elapsed)
                 else:
                     failed += 1
-                    print(f"Request {request_id} failed: {response.status_code} - {response.text}")
+                    print(
+                        f"Request {request_id} failed: {response.status_code} - {response.text}"
+                    )
             except Exception as e:
                 failed += 1
                 print(f"Request {request_id} error: {e}")
@@ -107,7 +114,7 @@ def print_results(result: BenchmarkResult):
     print(f"Total Requests:     {result.total_requests}")
     print(f"Successful:         {result.successful}")
     print(f"Failed:             {result.failed}")
-    print(f"Success Rate:       {result.successful/result.total_requests*100:.1f}%")
+    print(f"Success Rate:       {result.successful / result.total_requests * 100:.1f}%")
     print("-" * 60)
     print(f"Min Latency:        {result.min_latency_ms:.2f} ms")
     print(f"Max Latency:        {result.max_latency_ms:.2f} ms")

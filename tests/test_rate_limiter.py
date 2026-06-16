@@ -1,5 +1,9 @@
 import pytest
-from verialign.proxy.middleware.rate_limiter import RateLimiter, RateLimitConfig, TokenBucket
+from verialign.proxy.middleware.rate_limiter import (
+    RateLimiter,
+    RateLimitConfig,
+    TokenBucket,
+)
 
 
 class TestTokenBucket:
@@ -16,6 +20,7 @@ class TestTokenBucket:
 
     def test_refill_over_time(self):
         import time
+
         bucket = TokenBucket(capacity=10, refill_rate=10.0)  # 10 tokens/sec
         bucket.consume(10)
         assert bucket.consume(1) is False
@@ -25,7 +30,9 @@ class TestTokenBucket:
 
 class TestRateLimiter:
     def setup_method(self):
-        self.limiter = RateLimiter(RateLimitConfig(requests_per_minute=10, tokens_per_minute=1000))
+        self.limiter = RateLimiter(
+            RateLimitConfig(requests_per_minute=10, tokens_per_minute=1000)
+        )
 
     def test_check_limit_allows_within_limit(self):
         allowed, info = self.limiter.check_limit("client1", estimated_tokens=100)
@@ -42,7 +49,9 @@ class TestRateLimiter:
 
     def test_check_limit_blocks_tokens_over_limit(self):
         for _ in range(10):
-            self.limiter.check_limit("client3", estimated_tokens=200)  # 2000 tokens total > 1000 limit
+            self.limiter.check_limit(
+                "client3", estimated_tokens=200
+            )  # 2000 tokens total > 1000 limit
         allowed, info = self.limiter.check_limit("client3", estimated_tokens=100)
         assert allowed is False
 

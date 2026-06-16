@@ -23,7 +23,9 @@ def render_status_pie(status_data: dict, title: str = "Claim Status Distribution
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_line_chart(df: pd.DataFrame, x: str, y: str, title: str = "", color: str = None):
+def render_line_chart(
+    df: pd.DataFrame, x: str, y: str, title: str = "", color: str = None
+):
     if df.empty:
         st.info("No data available")
         return
@@ -33,7 +35,9 @@ def render_line_chart(df: pd.DataFrame, x: str, y: str, title: str = "", color: 
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_bar_chart(df: pd.DataFrame, x: str, y: str, title: str = "", color: str = None):
+def render_bar_chart(
+    df: pd.DataFrame, x: str, y: str, title: str = "", color: str = None
+):
     if df.empty:
         st.info("No data available")
         return
@@ -51,23 +55,31 @@ def render_heatmap(df: pd.DataFrame, x: str, y: str, z: str, title: str = ""):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_gauge(value: float, title: str = "", min_val: float = 0, max_val: float = 1, threshold: float = 0.5):
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=value,
-        title={"text": title},
-        gauge={
-            "axis": {"range": [min_val, max_val]},
-            "bar": {"color": "darkblue"},
-            "steps": [
-                {"range": [min_val, threshold], "color": "lightgray"},
-                {"range": [threshold, max_val], "color": "lightgreen"},
-            ],
-            "threshold": {
-                "line": {"color": "red", "width": 4},
-                "thickness": 0.75,
-                "value": threshold,
+def render_gauge(
+    value: float,
+    title: str = "",
+    min_val: float = 0,
+    max_val: float = 1,
+    threshold: float = 0.5,
+):
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=value,
+            title={"text": title},
+            gauge={
+                "axis": {"range": [min_val, max_val]},
+                "bar": {"color": "darkblue"},
+                "steps": [
+                    {"range": [min_val, threshold], "color": "lightgray"},
+                    {"range": [threshold, max_val], "color": "lightgreen"},
+                ],
+                "threshold": {
+                    "line": {"color": "red", "width": 4},
+                    "thickness": 0.75,
+                    "value": threshold,
+                },
             },
-        },
-    ))
+        )
+    )
     st.plotly_chart(fig, use_container_width=True)

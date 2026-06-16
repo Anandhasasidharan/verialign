@@ -7,7 +7,9 @@ def render(df: pd.DataFrame):
     st.header("📊 Overview")
 
     if df.empty:
-        st.info("No traces found. Make some requests through VeriAlign to see data here.")
+        st.info(
+            "No traces found. Make some requests through VeriAlign to see data here."
+        )
         return
 
     col1, col2, col3, col4 = st.columns(4)
@@ -34,7 +36,11 @@ def render(df: pd.DataFrame):
     with col1:
         st.subheader("Claims by Status")
         status_cols = ["supported", "unsupported", "unclear", "partially_supported"]
-        status_data = {col: int(df.get(col, pd.Series([0])).sum()) for col in status_cols if col in df.columns}
+        status_data = {
+            col: int(df.get(col, pd.Series([0])).sum())
+            for col in status_cols
+            if col in df.columns
+        }
         if status_data:
             render_status_pie(status_data)
 

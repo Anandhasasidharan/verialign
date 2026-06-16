@@ -21,7 +21,9 @@ class VerificationCache:
             raw += json.dumps(context, sort_keys=True, default=str)
         return hashlib.sha256(raw.encode()).hexdigest()
 
-    def get(self, text: str, context: object | None = None) -> VerificationResult | None:
+    def get(
+        self, text: str, context: object | None = None
+    ) -> VerificationResult | None:
         key = self._make_key(text, context)
         entry = self._cache.get(key)
         if entry is None:
@@ -32,7 +34,9 @@ class VerificationCache:
             return None
         return result
 
-    def set(self, text: str, context: object | None, result: VerificationResult) -> None:
+    def set(
+        self, text: str, context: object | None, result: VerificationResult
+    ) -> None:
         if len(self._cache) >= self._max_size:
             self._evict()
         key = self._make_key(text, context)

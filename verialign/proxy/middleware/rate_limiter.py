@@ -34,13 +34,21 @@ class TokenBucket:
 class RateLimiter:
     def __init__(self, default_config: RateLimitConfig | None = None) -> None:
         self.default_config = default_config or RateLimitConfig()
-        self.buckets: dict[str, tuple[TokenBucket, TokenBucket]] = defaultdict(self._create_buckets)
+        self.buckets: dict[str, tuple[TokenBucket, TokenBucket]] = defaultdict(
+            self._create_buckets
+        )
         self._lock = threading.Lock()
 
     def _create_buckets(self) -> tuple[TokenBucket, TokenBucket]:
         return (
-            TokenBucket(self.default_config.requests_per_minute, self.default_config.requests_per_minute / 60.0),
-            TokenBucket(self.default_config.tokens_per_minute, self.default_config.tokens_per_minute / 60.0),
+            TokenBucket(
+                self.default_config.requests_per_minute,
+                self.default_config.requests_per_minute / 60.0,
+            ),
+            TokenBucket(
+                self.default_config.tokens_per_minute,
+                self.default_config.tokens_per_minute / 60.0,
+            ),
         )
 
     def check_limit(self, key: str, estimated_tokens: int = 1000) -> tuple[bool, dict]:

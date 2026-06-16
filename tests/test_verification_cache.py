@@ -4,7 +4,15 @@ from verialign.verification.models import VerificationResult, VerifiedClaim
 
 def _make_result(text: str = "test") -> VerificationResult:
     return VerificationResult(
-        claims=[VerifiedClaim(text=text, status="supported", confidence=0.9, sources=[], claim_id="c-0")],
+        claims=[
+            VerifiedClaim(
+                text=text,
+                status="supported",
+                confidence=0.9,
+                sources=[],
+                claim_id="c-0",
+            )
+        ],
         contradictions=[],
         checklist=[],
     )

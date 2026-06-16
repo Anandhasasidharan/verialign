@@ -12,6 +12,7 @@ def render(df: pd.DataFrame):
     all_contradictions = []
     for _, row in df.iterrows():
         import json
+
         try:
             v = json.loads(row["verification_json"])
             contradictions = v.get("contradictions", [])
@@ -49,6 +50,14 @@ def render(df: pd.DataFrame):
     st.divider()
 
     st.subheader("Recent Contradictions")
-    display_cols = ["trace_id", "model", "created_at", "type", "confidence", "claim_a", "claim_b"]
+    display_cols = [
+        "trace_id",
+        "model",
+        "created_at",
+        "type",
+        "confidence",
+        "claim_a",
+        "claim_b",
+    ]
     available_cols = [c for c in display_cols if c in contra_df.columns]
     st.dataframe(contra_df[available_cols].head(50), use_container_width=True)

@@ -14,14 +14,18 @@ class TestChecklistGenerator:
         claims = ["The Earth is flat."]
         verification = [{"status": "unsupported", "confidence": 0.2}]
         items = self.generator.generate("The Earth is flat.", claims, verification)
-        unsupported_items = [i for i in items if i.category == "verification" and i.priority == "high"]
+        unsupported_items = [
+            i for i in items if i.category == "verification" and i.priority == "high"
+        ]
         assert len(unsupported_items) >= 1
 
     def test_generate_verification_items_unclear_low_confidence(self):
         claims = ["Something unclear."]
         verification = [{"status": "unclear", "confidence": 0.3}]
         items = self.generator.generate("Something unclear.", claims, verification)
-        unclear_items = [i for i in items if i.category == "verification" and i.priority == "medium"]
+        unclear_items = [
+            i for i in items if i.category == "verification" and i.priority == "medium"
+        ]
         assert len(unclear_items) >= 1
 
     def test_generate_action_items_security(self):
@@ -48,7 +52,11 @@ class TestChecklistGenerator:
             "C results in D since E happened.",
         ]
         items = self.generator.generate("", claims, [])
-        causal_items = [i for i in items if i.category == "consistency" and "causal" in i.description.lower()]
+        causal_items = [
+            i
+            for i in items
+            if i.category == "consistency" and "causal" in i.description.lower()
+        ]
         assert len(causal_items) >= 1
 
     def test_generate_claim_category_conditional(self):
@@ -57,13 +65,23 @@ class TestChecklistGenerator:
             "When A is true then B follows.",
         ]
         items = self.generator.generate("", claims, [])
-        conditional_items = [i for i in items if i.category == "consistency" and "conditional" in i.description.lower()]
+        conditional_items = [
+            i
+            for i in items
+            if i.category == "consistency" and "conditional" in i.description.lower()
+        ]
         assert len(conditional_items) >= 1
 
     def test_to_dict(self):
         from verialign.verification.models import ChecklistItem
+
         items = [
-            ChecklistItem(description="Test item", category="test", priority="high", related_claims=["claim1"]),
+            ChecklistItem(
+                description="Test item",
+                category="test",
+                priority="high",
+                related_claims=["claim1"],
+            ),
         ]
         dicts = self.generator.to_dict(items)
         assert len(dicts) == 1

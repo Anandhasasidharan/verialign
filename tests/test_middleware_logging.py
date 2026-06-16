@@ -7,8 +7,11 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from verialign.proxy.middleware.logging_middleware import (
-    JsonFormatter, configure_logging, CorrelationIdMiddleware,
-    get_request_id, request_id_var,
+    JsonFormatter,
+    configure_logging,
+    CorrelationIdMiddleware,
+    get_request_id,
+    request_id_var,
 )
 
 
@@ -43,9 +46,15 @@ class TestJsonFormatter:
 
     def test_reserved_attrs_excluded(self):
         import logging as _logging
+
         record = _logging.LogRecord(
-            name="test", level=_logging.INFO, pathname="", lineno=0,
-            msg="test msg", args=(), exc_info=None,
+            name="test",
+            level=_logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="test msg",
+            args=(),
+            exc_info=None,
         )
         record.asctime = "should_not_appear"
         record.funcName = "should_not_appear"

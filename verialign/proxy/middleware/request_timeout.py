@@ -14,10 +14,15 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         try:
-            response = await asyncio.wait_for(call_next(request), timeout=self.timeout_seconds)
+            response = await asyncio.wait_for(
+                call_next(request), timeout=self.timeout_seconds
+            )
             return response
         except asyncio.TimeoutError:
-            logger.warning("request_timeout", extra={"path": str(request.url.path), "timeout": self.timeout_seconds})
+            logger.warning(
+                "request_timeout",
+                extra={"path": str(request.url.path), "timeout": self.timeout_seconds},
+            )
             return JSONResponse(
                 status_code=408,
                 content={

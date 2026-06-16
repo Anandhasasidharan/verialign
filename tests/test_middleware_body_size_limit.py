@@ -43,5 +43,7 @@ class TestRequestBodySizeLimitMiddleware:
     def test_no_content_length_header_allowed(self):
         app = _build_app(max_size=10)
         client = TestClient(app)
-        resp = client.post("/test", content=b"", headers={"content-type": "application/json"})
+        resp = client.post(
+            "/test", content=b"", headers={"content-type": "application/json"}
+        )
         assert resp.status_code == 200

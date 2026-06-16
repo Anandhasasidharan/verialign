@@ -43,7 +43,7 @@ def test_chat_completion_adds_verification(tmp_path, monkeypatch):
                     }
                 ]
             },
-        }
+        },
     )
 
     assert response.status_code == 200
@@ -75,7 +75,7 @@ def test_chat_completion_streaming_returns_events(tmp_path, monkeypatch):
             "model": "demo",
             "stream": True,
             "messages": [{"role": "user", "content": "Stream this."}],
-        }
+        },
     )
 
     assert response.status_code == 200
@@ -99,7 +99,7 @@ def test_chat_completion_uses_demo_mode_without_provider_env(tmp_path, monkeypat
         json={
             "model": "demo",
             "messages": [{"role": "user", "content": "Use demo mode."}],
-        }
+        },
     )
 
     assert response.status_code == 200
@@ -120,7 +120,7 @@ def test_chat_completion_requires_auth_when_enabled(tmp_path, monkeypatch):
         json={
             "model": "demo",
             "messages": [{"role": "user", "content": "Test"}],
-        }
+        },
     )
 
     assert response.status_code == 401
@@ -141,7 +141,7 @@ def test_chat_completion_works_with_valid_auth(tmp_path, monkeypatch):
         json={
             "model": "demo",
             "messages": [{"role": "user", "content": "Test"}],
-        }
+        },
     )
 
     assert response.status_code == 200

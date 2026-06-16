@@ -40,7 +40,9 @@ def render(df: pd.DataFrame):
     if verification.get("contradictions"):
         st.subheader("Contradictions")
         for c in verification["contradictions"]:
-            with st.expander(f"{c['type'].title()}: {c['claim_a'][:50]}... vs {c['claim_b'][:50]}..."):
+            with st.expander(
+                f"{c['type'].title()}: {c['claim_a'][:50]}... vs {c['claim_b'][:50]}..."
+            ):
                 st.write(f"**Claim A:** {c['claim_a']}")
                 st.write(f"**Claim B:** {c['claim_b']}")
                 st.write(f"**Type:** {c['type']}")
@@ -49,5 +51,9 @@ def render(df: pd.DataFrame):
     if verification.get("checklist"):
         st.subheader("Verification Checklist")
         for item in verification["checklist"]:
-            priority_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(item.get("priority", ""), "⚪")
-            st.markdown(f"{priority_color} **{item['category']}**: {item['description']}")
+            priority_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
+                item.get("priority", ""), "⚪"
+            )
+            st.markdown(
+                f"{priority_color} **{item['category']}**: {item['description']}"
+            )

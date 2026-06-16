@@ -28,8 +28,10 @@ class TestWebGrounder:
 
     def test_unknown_provider_logs_warning(self, caplog):
         import logging
+
         g = WebGrounder(api_key="key", provider="unknown")
         import asyncio
+
         with caplog.at_level(logging.WARNING):
             asyncio.run(g.ground("test"))
         assert any("unknown_web_search_provider" in rec.msg for rec in caplog.records)
@@ -38,6 +40,7 @@ class TestWebGrounder:
     @pytest.mark.asyncio
     async def test_integration_with_real_api(self):
         import os
+
         key = os.environ.get("VERIALIGN_WEB_SEARCH_API_KEY")
         if not key:
             pytest.skip("VERIALIGN_WEB_SEARCH_API_KEY not set")

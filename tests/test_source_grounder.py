@@ -6,7 +6,12 @@ from verialign.verification.source_grounder import SourceGrounder
 async def test_supported_claim() -> None:
     status, confidence, sources = await SourceGrounder().ground(
         "VeriAlign is a verification support proxy for LLM outputs.",
-        [{"id": "paper", "text": "VeriAlign is a verification support proxy for LLM outputs."}],
+        [
+            {
+                "id": "paper",
+                "text": "VeriAlign is a verification support proxy for LLM outputs.",
+            }
+        ],
     )
 
     assert status == "supported"

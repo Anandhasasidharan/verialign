@@ -26,51 +26,88 @@ BENCHMARK_CASES = [
     # Geography hallucinations
     AdversarialCase(
         text="Paris is the capital of Germany.",
-        context=[{"id": "geo-1", "text": "The capital of France is Paris. The capital of Germany is Berlin."}],
+        context=[
+            {
+                "id": "geo-1",
+                "text": "The capital of France is Paris. The capital of Germany is Berlin.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     AdversarialCase(
         text="The Amazon River flows through Egypt.",
-        context=[{"id": "geo-2", "text": "The Amazon River flows through Brazil. The Nile River flows through Egypt."}],
+        context=[
+            {
+                "id": "geo-2",
+                "text": "The Amazon River flows through Brazil. The Nile River flows through Egypt.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     AdversarialCase(
         text="Mount Everest is located in Africa.",
-        context=[{"id": "geo-3", "text": "Mount Everest is located in Asia, in the Himalayas."}],
+        context=[
+            {
+                "id": "geo-3",
+                "text": "Mount Everest is located in Asia, in the Himalayas.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     # Science hallucinations
     AdversarialCase(
         text="Water boils at 50 degrees Celsius at sea level.",
-        context=[{"id": "sci-1", "text": "Water boils at 100 degrees Celsius at sea level."}],
+        context=[
+            {"id": "sci-1", "text": "Water boils at 100 degrees Celsius at sea level."}
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     AdversarialCase(
         text="Humans have 48 chromosomes.",
-        context=[{"id": "sci-2", "text": "Humans have 23 pairs of chromosomes, for a total of 46."}],
+        context=[
+            {
+                "id": "sci-2",
+                "text": "Humans have 23 pairs of chromosomes, for a total of 46.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     AdversarialCase(
         text="The speed of light is approximately 300 meters per second.",
-        context=[{"id": "sci-3", "text": "The speed of light is approximately 300,000 kilometers per second."}],
+        context=[
+            {
+                "id": "sci-3",
+                "text": "The speed of light is approximately 300,000 kilometers per second.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     # History hallucinations
     AdversarialCase(
         text="World War II ended in 1943.",
-        context=[{"id": "hist-1", "text": "World War II ended in 1945 with the surrender of Japan."}],
+        context=[
+            {
+                "id": "hist-1",
+                "text": "World War II ended in 1945 with the surrender of Japan.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
     AdversarialCase(
         text="The Declaration of Independence was signed in 1789.",
-        context=[{"id": "hist-2", "text": "The Declaration of Independence was signed in 1776. The US Constitution was signed in 1787."}],
+        context=[
+            {
+                "id": "hist-2",
+                "text": "The Declaration of Independence was signed in 1776. The US Constitution was signed in 1787.",
+            }
+        ],
         expected_unsupported=True,
         expected_contradictions=0,
     ),
@@ -96,7 +133,9 @@ BENCHMARK_CASES = [
     ),
     AdversarialCase(
         text="Water boils at 100 degrees Celsius.",
-        context=[{"id": "sci-4", "text": "Water boils at 100 degrees Celsius at sea level."}],
+        context=[
+            {"id": "sci-4", "text": "Water boils at 100 degrees Celsius at sea level."}
+        ],
         expected_unsupported=False,
         expected_contradictions=0,
     ),
@@ -142,17 +181,23 @@ async def run_benchmark(engine: VerificationEngine | None = None) -> Adversarial
             if has_contradictions:
                 contradictions_detected += 1
 
-        details.append({
-            "text": case.text[:60],
-            "expected_unsupported": case.expected_unsupported,
-            "flagged_as_unsupported": is_unsupported,
-            "contradictions_found": len(result.contradictions),
-            "claim_statuses": [c.status for c in result.claims],
-        })
+        details.append(
+            {
+                "text": case.text[:60],
+                "expected_unsupported": case.expected_unsupported,
+                "flagged_as_unsupported": is_unsupported,
+                "contradictions_found": len(result.contradictions),
+                "claim_statuses": [c.status for c in result.claims],
+            }
+        )
 
     total = len(BENCHMARK_CASES)
     hallucination_cases = sum(1 for c in BENCHMARK_CASES if c.expected_unsupported)
-    accuracy = (flagged + (total - hallucination_cases - false_positives)) / total if total > 0 else 0
+    accuracy = (
+        (flagged + (total - hallucination_cases - false_positives)) / total
+        if total > 0
+        else 0
+    )
 
     return AdversarialResult(
         total_cases=total,
@@ -178,8 +223,12 @@ def print_results(result: AdversarialResult) -> None:
     print("-" * 60)
     print("Per-case breakdown:")
     for d in result.details:
-        status = "✓" if d["flagged_as_unsupported"] == d["expected_unsupported"] else "✗"
-        print(f"  {status} {d['text']:<55} {'flagged' if d['flagged_as_unsupported'] else 'ok'}")
+        status = (
+            "✓" if d["flagged_as_unsupported"] == d["expected_unsupported"] else "✗"
+        )
+        print(
+            f"  {status} {d['text']:<55} {'flagged' if d['flagged_as_unsupported'] else 'ok'}"
+        )
         if d["contradictions_found"] > 0:
             print(f"      contradictions: {d['contradictions_found']}")
     print("=" * 60)

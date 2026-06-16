@@ -26,7 +26,9 @@ class ProviderClient:
             "content-type": "application/json",
         }
 
-        async with httpx.AsyncClient(timeout=self.settings.upstream_timeout_seconds) as client:
+        async with httpx.AsyncClient(
+            timeout=self.settings.upstream_timeout_seconds
+        ) as client:
             try:
                 response = await client.post(url, headers=headers, json=payload)
             except httpx.HTTPError as exc:
@@ -64,4 +66,3 @@ class ProviderClient:
             ],
             "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
         }
-

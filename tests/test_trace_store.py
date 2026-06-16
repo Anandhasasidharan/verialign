@@ -7,7 +7,7 @@ from verialign.verification.models import VerificationResult, VerifiedClaim, Sou
 
 class TestRedactSensitiveData:
     def test_redact_authorization_header(self):
-        text = 'Authorization: Bearer sk-1234567890abcdef'
+        text = "Authorization: Bearer sk-1234567890abcdef"
         result = redact_sensitive_data(text)
         assert "Bearer [REDACTED]" in result
         assert "sk-1234567890abcdef" not in result
@@ -19,7 +19,7 @@ class TestRedactSensitiveData:
         assert "sk-abcdef1234567890" not in result
 
     def test_redact_secret(self):
-        text = 'secret: my-secret-value'
+        text = "secret: my-secret-value"
         result = redact_sensitive_data(text)
         assert "[REDACTED]" in result
         assert "my-secret-value" not in result
@@ -36,7 +36,11 @@ class TestRedactSensitiveData:
         assert result["normal"] == "value"
 
     def test_redact_list(self):
-        data = ["Bearer token123", "normal", {"key": "sk-1234567890abcdef1234567890abcdef"}]
+        data = [
+            "Bearer token123",
+            "normal",
+            {"key": "sk-1234567890abcdef1234567890abcdef"},
+        ]
         result = redact_sensitive_data(data)
         assert result[0] == "Bearer [REDACTED]"
         assert result[1] == "normal"

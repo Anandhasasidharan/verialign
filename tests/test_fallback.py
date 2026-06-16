@@ -1,6 +1,11 @@
 import pytest
 from unittest.mock import MagicMock
-from verialign.proxy.routing.provider_router import ProviderRouter, BaseProvider, ProviderResponse, ProviderError
+from verialign.proxy.routing.provider_router import (
+    ProviderRouter,
+    BaseProvider,
+    ProviderResponse,
+    ProviderError,
+)
 from verialign.proxy.routing.fallback import ProviderFallback, with_fallback
 
 
@@ -20,9 +25,14 @@ class MockProvider(BaseProvider):
     async def chat_completions(self, payload: dict) -> ProviderResponse:
         self.call_count += 1
         if self.should_fail:
-            raise ProviderError(f"{self.name} failed", status_code=self.fail_status, provider=self.name)
+            raise ProviderError(
+                f"{self.name} failed", status_code=self.fail_status, provider=self.name
+            )
         return ProviderResponse(
-            data={"id": f"resp-{self.name}", "choices": [{"message": {"content": f"Response from {self.name}"}}]},
+            data={
+                "id": f"resp-{self.name}",
+                "choices": [{"message": {"content": f"Response from {self.name}"}}],
+            },
             provider_name=self.name,
         )
 

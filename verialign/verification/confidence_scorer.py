@@ -42,8 +42,8 @@ class ConfidenceScorer:
         overlap_confidence = source_overlap
 
         combined = (
-            self.logprob_weight * logprob_confidence +
-            self.overlap_weight * overlap_confidence
+            self.logprob_weight * logprob_confidence
+            + self.overlap_weight * overlap_confidence
         )
 
         return ConfidenceScore(
@@ -62,9 +62,20 @@ class ConfidenceScorer:
         length_factor = min(1.0, claim_length / 20.0)
 
         hedging_phrases = [
-            "might", "could", "possibly", "perhaps", "maybe",
-            "likely", "unlikely", "probably", "seems", "appears",
-            "suggests", "indicates", "around", "approximately",
+            "might",
+            "could",
+            "possibly",
+            "perhaps",
+            "maybe",
+            "likely",
+            "unlikely",
+            "probably",
+            "seems",
+            "appears",
+            "suggests",
+            "indicates",
+            "around",
+            "approximately",
         ]
         hedging_penalty = 0.0
         claim_lower = claim.lower()
@@ -80,7 +91,13 @@ class ConfidenceScorer:
             specificity_bonus += 0.1
 
         base_confidence = 0.5
-        confidence = base_confidence + (source_overlap * 0.4) + (length_factor * 0.1) - hedging_penalty + specificity_bonus
+        confidence = (
+            base_confidence
+            + (source_overlap * 0.4)
+            + (length_factor * 0.1)
+            - hedging_penalty
+            + specificity_bonus
+        )
         confidence = max(0.0, min(1.0, confidence))
 
         return ConfidenceScore(

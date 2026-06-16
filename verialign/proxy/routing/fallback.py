@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 
-from verialign.proxy.routing.provider_router import ProviderRouter, ProviderResponse, ProviderError
+from verialign.proxy.routing.provider_router import (
+    ProviderRouter,
+    ProviderResponse,
+    ProviderError,
+)
 
 
 @dataclass
@@ -18,7 +22,13 @@ class ProviderFallback:
     ) -> None:
         self.router = router
         self.max_retries = max_retries
-        self.retryable_status_codes = retryable_status_codes or {429, 500, 502, 503, 504}
+        self.retryable_status_codes = retryable_status_codes or {
+            429,
+            500,
+            502,
+            503,
+            504,
+        }
 
     async def chat_completions_with_fallback(
         self,
@@ -30,7 +40,9 @@ class ProviderFallback:
 
         providers = self.router.get_configured_providers()
         if not providers:
-            return FallbackResult(response=self.router._demo_response(payload), attempts=[])
+            return FallbackResult(
+                response=self.router._demo_response(payload), attempts=[]
+            )
 
         if preferred_provider:
             provider = self.router.get_provider(preferred_provider)

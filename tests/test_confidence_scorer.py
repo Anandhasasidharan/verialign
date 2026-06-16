@@ -49,15 +49,17 @@ class TestConfidenceScorer:
 
     def test_score_response_extracts_logprobs(self):
         response = {
-            "choices": [{
-                "logprobs": {
-                    "content": [
-                        {"logprob": -0.1},
-                        {"logprob": -0.2},
-                        {"logprob": -0.15},
-                    ]
+            "choices": [
+                {
+                    "logprobs": {
+                        "content": [
+                            {"logprob": -0.1},
+                            {"logprob": -0.2},
+                            {"logprob": -0.15},
+                        ]
+                    }
                 }
-            }]
+            ]
         }
         result = self.scorer.score_response(response)
         assert result is not None

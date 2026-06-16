@@ -77,7 +77,9 @@ def validate_request(payload: dict) -> ValidatedRequest:
         raise ValueError("tools must be a list")
 
     tool_choice = payload.get("tool_choice")
-    if tool_choice is not None and not (isinstance(tool_choice, (str, dict)) or tool_choice is None):
+    if tool_choice is not None and not (
+        isinstance(tool_choice, (str, dict)) or tool_choice is None
+    ):
         raise ValueError("tool_choice must be a string, object, or null")
 
     response_format = payload.get("response_format")

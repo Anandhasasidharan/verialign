@@ -20,13 +20,19 @@ class AsyncTraceStore:
     def _get_engine(self):
         if self._engine is None:
             from sqlalchemy.ext.asyncio import create_async_engine
-            self._engine = create_async_engine(self.database_url, pool_size=10, max_overflow=20)
+
+            self._engine = create_async_engine(
+                self.database_url, pool_size=10, max_overflow=20
+            )
         return self._engine
 
     def _get_session_factory(self):
         if self._session_factory is None:
             from sqlalchemy.ext.asyncio import async_sessionmaker
-            self._session_factory = async_sessionmaker(self._get_engine(), expire_on_commit=False)
+
+            self._session_factory = async_sessionmaker(
+                self._get_engine(), expire_on_commit=False
+            )
         return self._session_factory
 
     async def initialize(self) -> None:
@@ -35,14 +41,22 @@ class AsyncTraceStore:
             await conn.run_sync(Base.metadata.create_all)
 
     async def write_trace(
-        self, request_payload: dict, response_payload: dict, verification: VerificationResult
+        self,
+        request_payload: dict,
+        response_payload: dict,
+        verification: VerificationResult,
     ) -> None:
-        request_to_store = redact_sensitive_data(request_payload) if self.redact else request_payload
-        response_to_store = redact_sensitive_data(response_payload) if self.redact else response_payload
+        request_to_store = (
+            redact_sensitive_data(request_payload) if self.redact else request_payload
+        )
+        response_to_store = (
+            redact_sensitive_data(response_payload) if self.redact else response_payload
+        )
 
         session_factory = self._get_session_factory()
         async with session_factory() as session:
             from verialign.storage.models import Trace
+
             trace = Trace(
                 created_at=datetime.now(timezone.utc),
                 model=str(request_payload.get("model", "")),
@@ -72,13 +86,27 @@ class AsyncTraceStore:
 
         traces: list[dict] = []
         for row in rows:
-            request_data = json.loads(row.request_json) if isinstance(row.request_json, str) else row.request_json
-            response_data = json.loads(row.response_json) if isinstance(row.response_json, str) else row.response_json
-            verification_data = json.loads(row.verification_json) if isinstance(row.verification_json, str) else row.verification_json
+            request_data = (
+                json.loads(row.request_json)
+                if isinstance(row.request_json, str)
+                else row.request_json
+            )
+            response_data = (
+                json.loads(row.response_json)
+                if isinstance(row.response_json, str)
+                else row.response_json
+            )
+            verification_data = (
+                json.loads(row.verification_json)
+                if isinstance(row.verification_json, str)
+                else row.verification_json
+            )
             traces.append(
                 {
                     "id": row.id,
-                    "created_at": row.created_at.isoformat() if hasattr(row.created_at, "isoformat") else str(row.created_at),
+                    "created_at": row.created_at.isoformat()
+                    if hasattr(row.created_at, "isoformat")
+                    else str(row.created_at),
                     "model": row.model,
                     "request": request_data,
                     "response": response_data,

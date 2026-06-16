@@ -17,12 +17,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # Force SQLite in-memory for tests
 import os
+
 os.environ["VERIALIGN_DB_PATH"] = "/tmp/verialign_test_distilgpt2.sqlite3"
 os.environ["VERIALIGN_DATABASE_URL"] = "sqlite:///tmp/verialign_test_distilgpt2.sqlite3"
 
 from transformers import pipeline
 from verialign.proxy.config import get_settings
 from verialign.verification.engine import VerificationEngine
+
 get_settings.cache_clear()
 
 
@@ -82,7 +84,10 @@ async def main():
     print("\n[4/5] Running verification on sample text...")
     text = "Paris is the capital of France. The Eiffel Tower is a famous landmark."
     context = [
-        {"id": "doc-1", "text": "The capital of France is Paris. The Eiffel Tower was built in 1889."}
+        {
+            "id": "doc-1",
+            "text": "The capital of France is Paris. The Eiffel Tower was built in 1889.",
+        }
     ]
 
     result = await engine.verify(text, context)
@@ -112,9 +117,15 @@ async def main():
     print(f"  Total claims (test 2):      {len(result2.claims)}")
     claims_with_llm = sum(1 for c in result.claims if c.text.startswith("claim"))
     print(f"  LLM-sourced claims:          {claims_with_llm}")
-    print(f"  Contradictions detected:     {len(result.contradictions) + len(result2.contradictions)}")
-    print(f"  Checklist items generated:   {len(result.checklist) + len(result2.checklist)}")
-    print("  Pipeline status:             OK — distilgpt2 is fully functional as LLM judge")
+    print(
+        f"  Contradictions detected:     {len(result.contradictions) + len(result2.contradictions)}"
+    )
+    print(
+        f"  Checklist items generated:   {len(result.checklist) + len(result2.checklist)}"
+    )
+    print(
+        "  Pipeline status:             OK — distilgpt2 is fully functional as LLM judge"
+    )
     print("=" * 60)
 
     # Cleanup

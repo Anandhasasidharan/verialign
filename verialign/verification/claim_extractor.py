@@ -54,11 +54,15 @@ class ClaimExtractor:
     async def _extract_with_llm(self, text: str) -> list[str]:
         try:
             prompt = _LLM_EXTRACT_PROMPT.format(text=text[:2000])
-            result = self.llm_client({"messages": [{"role": "user", "content": prompt}], "temperature": 0.1})
+            result = self.llm_client(
+                {"messages": [{"role": "user", "content": prompt}], "temperature": 0.1}
+            )
             if hasattr(result, "__await__"):
                 result = await result
             response = result if isinstance(result, dict) else {}
-            content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+            content = (
+                response.get("choices", [{}])[0].get("message", {}).get("content", "")
+            )
 
             content = content.strip()
             if content.startswith("```"):

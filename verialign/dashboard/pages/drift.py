@@ -11,11 +11,19 @@ def render(df: pd.DataFrame):
 
     df["date"] = pd.to_datetime(df["created_at"]).dt.date
 
-    daily = df.groupby("date").agg(
-        requests=("id", "count"),
-        total_claims=("total_claims", "sum") if "total_claims" in df.columns else ("id", "count"),
-        supported=("supported", "sum") if "supported" in df.columns else ("id", "count"),
-    ).reset_index()
+    daily = (
+        df.groupby("date")
+        .agg(
+            requests=("id", "count"),
+            total_claims=("total_claims", "sum")
+            if "total_claims" in df.columns
+            else ("id", "count"),
+            supported=("supported", "sum")
+            if "supported" in df.columns
+            else ("id", "count"),
+        )
+        .reset_index()
+    )
 
     if len(daily) > 1:
         col1, col2 = st.columns(2)
@@ -32,7 +40,9 @@ def render(df: pd.DataFrame):
             st.line_chart(daily.set_index("date")["supported"])
 
             if "total_claims" in daily.columns and daily["total_claims"].sum() > 0:
-                daily["support_rate"] = daily["supported"] / daily["total_claims"].replace(0, 1)
+                daily["support_rate"] = daily["supported"] / daily[
+                    "total_claims"
+                ].replace(0, 1)
                 st.subheader("Support Rate Over Time")
                 st.line_chart(daily.set_index("date")["support_rate"])
     else:

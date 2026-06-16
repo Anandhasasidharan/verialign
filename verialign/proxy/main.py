@@ -11,18 +11,30 @@ from fastapi.security import APIKeyHeader
 
 from verialign.proxy.config import get_settings
 from verialign.proxy.routing.provider_router import (
-    ProviderRouter, ProviderError, close_http_client,
+    ProviderRouter,
+    ProviderError,
+    close_http_client,
 )
 from verialign.proxy.routing.fallback import with_fallback
-from verialign.proxy.middleware.rate_limiter import RateLimiter, RateLimitConfig, get_rate_limiter
-from verialign.proxy.middleware.request_handler import validate_request, build_upstream_payload
+from verialign.proxy.middleware.rate_limiter import (
+    RateLimiter,
+    RateLimitConfig,
+    get_rate_limiter,
+)
+from verialign.proxy.middleware.request_handler import (
+    validate_request,
+    build_upstream_payload,
+)
 from verialign.proxy.middleware.response_handler import ResponseHandler
 from verialign.proxy.middleware.logging_middleware import (
-    configure_logging, CorrelationIdMiddleware, get_request_id,
+    configure_logging,
+    CorrelationIdMiddleware,
+    get_request_id,
 )
 from verialign.proxy.middleware.body_size_limit import RequestBodySizeLimitMiddleware
 from verialign.proxy.middleware.metrics_middleware import (
-    MetricsMiddleware, metrics_response,
+    MetricsMiddleware,
+    metrics_response,
 )
 from verialign.proxy.middleware.request_timeout import RequestTimeoutMiddleware
 from verialign.storage.store_factory import create_trace_store
@@ -37,24 +49,31 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     configure_logging()
     settings = get_settings()
-    limiter = RateLimiter(RateLimitConfig(
-        requests_per_minute=settings.rate_limit_requests_per_minute,
-        tokens_per_minute=settings.rate_limit_tokens_per_minute,
-    ))
+    limiter = RateLimiter(
+        RateLimitConfig(
+            requests_per_minute=settings.rate_limit_requests_per_minute,
+            tokens_per_minute=settings.rate_limit_tokens_per_minute,
+        )
+    )
     get_rate_limiter.__globals__["_global_limiter"] = limiter
 
     router = ProviderRouter(settings)
     if not router.get_configured_providers():
         has_upstream_key = bool(settings.upstream_api_key or settings.proxy_api_key)
         if has_upstream_key:
-            logger.warning("demo_mode_with_upstream_keys", extra={
-                "detail": "Upstream API keys are set but no provider is fully configured. "
-                          "Check VERIALIGN_UPSTREAM_BASE_URL and VERIALIGN_UPSTREAM_API_KEY."
-            })
+            logger.warning(
+                "demo_mode_with_upstream_keys",
+                extra={
+                    "detail": "Upstream API keys are set but no provider is fully configured. "
+                    "Check VERIALIGN_UPSTREAM_BASE_URL and VERIALIGN_UPSTREAM_API_KEY."
+                },
+            )
 
     logger.info("server_started", extra={"settings": self_sanitize(settings)})
 
-    store = create_trace_store(settings.database_url, settings.db_path, settings.redact_traces)
+    store = create_trace_store(
+        settings.database_url, settings.db_path, settings.redact_traces
+    )
     if isinstance(store, AsyncTraceStore):
         await store.initialize()
     app.state.trace_store = store
@@ -79,9 +98,11 @@ def _build_llm_client(router: ProviderRouter):
     providers = router.get_configured_providers()
     if providers:
         provider = providers[0]
+
         async def llm_client(payload: dict) -> dict:
             resp = await provider.chat_completions(payload)
             return resp.data
+
         return llm_client
     return None
 
@@ -91,8 +112,12 @@ app = FastAPI(title="VeriAlign", version="0.1.0", lifespan=lifespan)
 settings_at_startup = get_settings()
 
 app.add_middleware(CorrelationIdMiddleware)
-app.add_middleware(RequestBodySizeLimitMiddleware, max_size=settings_at_startup.max_request_body_size)
-app.add_middleware(RequestTimeoutMiddleware, timeout_seconds=settings_at_startup.proxy_timeout_seconds)
+app.add_middleware(
+    RequestBodySizeLimitMiddleware, max_size=settings_at_startup.max_request_body_size
+)
+app.add_middleware(
+    RequestTimeoutMiddleware, timeout_seconds=settings_at_startup.proxy_timeout_seconds
+)
 app.add_middleware(MetricsMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -110,7 +135,16 @@ def verify_proxy_auth(api_key: str = Depends(api_key_header)) -> None:
     if settings.require_proxy_auth and settings.proxy_api_key:
         provided = api_key.replace("Bearer ", "") if api_key else ""
         if provided != settings.proxy_api_key:
-            raise HTTPException(status_code=401, detail={"error": {"message": "Invalid or missing API key", "type": "auth_error", "status_code": 401}})
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "error": {
+                        "message": "Invalid or missing API key",
+                        "type": "auth_error",
+                        "status_code": 401,
+                    }
+                },
+            )
 
 
 @app.get("/health")
@@ -120,7 +154,9 @@ async def health() -> dict:
         store: AsyncTraceStore | TraceStore = getattr(app.state, "trace_store", None)
         if store is None:
             settings = get_settings()
-            store = create_trace_store(settings.database_url, settings.db_path, settings.redact_traces)
+            store = create_trace_store(
+                settings.database_url, settings.db_path, settings.redact_traces
+            )
         await _ensure_list_recent(store)
         db_ok = True
     except Exception:
@@ -152,7 +188,9 @@ def _get_store():
     store = getattr(app.state, "trace_store", None)
     if store is None:
         settings = get_settings()
-        store = create_trace_store(settings.database_url, settings.db_path, settings.redact_traces)
+        store = create_trace_store(
+            settings.database_url, settings.db_path, settings.redact_traces
+        )
     return store
 
 
@@ -169,14 +207,23 @@ async def metrics() -> Response:
 
 
 @app.get("/traces")
-async def traces(limit: int = Query(default=25, ge=1, le=100), _: None = Depends(verify_proxy_auth)) -> dict:
+async def traces(
+    limit: int = Query(default=25, ge=1, le=100), _: None = Depends(verify_proxy_auth)
+) -> dict:
     store = _get_store()
     if isinstance(store, AsyncTraceStore):
         return {"traces": await store.list_recent(limit)}
     return {"traces": store.list_recent(limit)}
 
 
-async def _handle_streaming(validated, payload: dict, router: ProviderRouter, rate_limiter, client_ip: str, settings):
+async def _handle_streaming(
+    validated,
+    payload: dict,
+    router: ProviderRouter,
+    rate_limiter,
+    client_ip: str,
+    settings,
+):
     rid = get_request_id()
 
     async def event_stream() -> AsyncIterator[str]:
@@ -204,11 +251,29 @@ async def _handle_streaming(validated, payload: dict, router: ProviderRouter, ra
         if full_text.strip():
             try:
                 llm_client = _build_llm_client(router)
-                verifier = VerificationEngine(llm_client=llm_client, web_api_key=settings.web_search_api_key, web_provider=settings.web_search_provider)
-                verification = await verifier.verify(full_text, payload.get("metadata", {}).get("context", []))
+                verifier = VerificationEngine(
+                    llm_client=llm_client,
+                    web_api_key=settings.web_search_api_key,
+                    web_provider=settings.web_search_provider,
+                )
+                verification = await verifier.verify(
+                    full_text, payload.get("metadata", {}).get("context", [])
+                )
                 store = _get_store()
-                await _write_trace(store, payload, {"choices": [{"message": {"content": full_text}}]}, verification)
-                logger.info("chat_completion_stream", extra={"request_id": rid, "model": validated.model, "claims": verification.summary["total_claims"]})
+                await _write_trace(
+                    store,
+                    payload,
+                    {"choices": [{"message": {"content": full_text}}]},
+                    verification,
+                )
+                logger.info(
+                    "chat_completion_stream",
+                    extra={
+                        "request_id": rid,
+                        "model": validated.model,
+                        "claims": verification.summary["total_claims"],
+                    },
+                )
             except Exception:
                 logger.exception("stream_verification_failed")
 
@@ -234,7 +299,13 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         logger.warning("validation_failed", extra={"error": str(exc)})
         return JSONResponse(
             status_code=400,
-            content={"error": {"message": str(exc), "type": "validation_error", "status_code": 400}},
+            content={
+                "error": {
+                    "message": str(exc),
+                    "type": "validation_error",
+                    "status_code": 400,
+                }
+            },
         )
 
     upstream_payload = build_upstream_payload(validated)
@@ -244,16 +315,24 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
     rate_limiter.check_limit(client_ip)
 
     if validated.stream:
-        return await _handle_streaming(validated, upstream_payload, router, rate_limiter, client_ip, settings)
+        return await _handle_streaming(
+            validated, upstream_payload, router, rate_limiter, client_ip, settings
+        )
 
-    fallback_response = await with_fallback(router, upstream_payload, preferred_provider=None)
+    fallback_response = await with_fallback(
+        router, upstream_payload, preferred_provider=None
+    )
 
     provider_name = fallback_response.provider_name
     upstream_response = fallback_response.data
 
     llm_client = _build_llm_client(router)
     structured = payload.get("response_format", {}).get("type") == "json_object"
-    verifier = VerificationEngine(llm_client=llm_client, web_api_key=settings.web_search_api_key, web_provider=settings.web_search_provider)
+    verifier = VerificationEngine(
+        llm_client=llm_client,
+        web_api_key=settings.web_search_api_key,
+        web_provider=settings.web_search_provider,
+    )
     response_handler = ResponseHandler(verifier, structured_output=structured)
     augmented = await response_handler.augment(upstream_response, payload)
 
@@ -281,7 +360,11 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
 async def provider_error_handler(request: Request, exc: ProviderError) -> JSONResponse:
     logger.error(
         "upstream_error",
-        extra={"provider": exc.provider, "status_code": exc.status_code, "detail": str(exc)},
+        extra={
+            "provider": exc.provider,
+            "status_code": exc.status_code,
+            "detail": str(exc),
+        },
     )
     return JSONResponse(
         status_code=exc.status_code,

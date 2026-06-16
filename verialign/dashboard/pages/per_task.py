@@ -4,10 +4,50 @@ import pandas as pd
 
 def classify_task(user_content: str) -> str:
     keywords = {
-        "coding": ["code", "function", "class", "api", "bug", "debug", "implement", "refactor", "python", "javascript", "sql"],
-        "writing": ["write", "essay", "article", "blog", "email", "story", "creative", "copy", "content"],
-        "analysis": ["analyze", "compare", "evaluate", "assess", "review", "critique", "examine"],
-        "question_answering": ["what", "how", "why", "when", "where", "who", "explain", "define", "describe"],
+        "coding": [
+            "code",
+            "function",
+            "class",
+            "api",
+            "bug",
+            "debug",
+            "implement",
+            "refactor",
+            "python",
+            "javascript",
+            "sql",
+        ],
+        "writing": [
+            "write",
+            "essay",
+            "article",
+            "blog",
+            "email",
+            "story",
+            "creative",
+            "copy",
+            "content",
+        ],
+        "analysis": [
+            "analyze",
+            "compare",
+            "evaluate",
+            "assess",
+            "review",
+            "critique",
+            "examine",
+        ],
+        "question_answering": [
+            "what",
+            "how",
+            "why",
+            "when",
+            "where",
+            "who",
+            "explain",
+            "define",
+            "describe",
+        ],
         "summarization": ["summarize", "summary", "tldr", "brief", "condense"],
         "translation": ["translate", "translation", "language"],
     }
@@ -28,6 +68,7 @@ def render(df: pd.DataFrame):
 
     def extract_task(row):
         import json
+
         try:
             req = json.loads(row["request_json"])
             messages = req.get("messages", [])
@@ -42,13 +83,23 @@ def render(df: pd.DataFrame):
 
     df["task"] = df.apply(extract_task, axis=1)
 
-    task_stats = df.groupby("task").agg(
-        requests=("id", "count"),
-        total_claims=("total_claims", "sum") if "total_claims" in df.columns else ("id", "count"),
-        supported=("supported", "sum") if "supported" in df.columns else ("id", "count"),
-        unsupported=("unsupported", "sum") if "unsupported" in df.columns else ("id", "count"),
-        unclear=("unclear", "sum") if "unclear" in df.columns else ("id", "count"),
-    ).reset_index()
+    task_stats = (
+        df.groupby("task")
+        .agg(
+            requests=("id", "count"),
+            total_claims=("total_claims", "sum")
+            if "total_claims" in df.columns
+            else ("id", "count"),
+            supported=("supported", "sum")
+            if "supported" in df.columns
+            else ("id", "count"),
+            unsupported=("unsupported", "sum")
+            if "unsupported" in df.columns
+            else ("id", "count"),
+            unclear=("unclear", "sum") if "unclear" in df.columns else ("id", "count"),
+        )
+        .reset_index()
+    )
 
     st.dataframe(task_stats, use_container_width=True)
 

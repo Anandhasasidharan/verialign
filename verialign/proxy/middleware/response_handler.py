@@ -11,14 +11,22 @@ class AugmentedResponse:
 
 
 class ResponseHandler:
-    def __init__(self, verifier: VerificationEngine | None = None, structured_output: bool = False) -> None:
+    def __init__(
+        self,
+        verifier: VerificationEngine | None = None,
+        structured_output: bool = False,
+    ) -> None:
         self.verifier = verifier or VerificationEngine()
         self.structured_output = structured_output
 
-    async def augment(self, upstream_response: dict, request_payload: dict) -> AugmentedResponse:
+    async def augment(
+        self, upstream_response: dict, request_payload: dict
+    ) -> AugmentedResponse:
         assistant_text = self._extract_assistant_text(upstream_response)
         context = request_payload.get("metadata", {}).get("context", [])
-        verification = await self.verifier.verify(assistant_text, context, response_data=upstream_response)
+        verification = await self.verifier.verify(
+            assistant_text, context, response_data=upstream_response
+        )
 
         response = dict(upstream_response)
         v_dict = verification.to_dict()

@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from prometheus_client import Counter, Histogram, generate_latest, REGISTRY
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
@@ -46,8 +47,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             raise
         finally:
             elapsed = time.monotonic() - start
-            request_count.labels(method=request.method, endpoint=request.url.path, status=status).inc()
-            request_latency.labels(method=request.method, endpoint=request.url.path).observe(elapsed)
+            request_count.labels(
+                method=request.method, endpoint=request.url.path, status=status
+            ).inc()
+            request_latency.labels(
+                method=request.method, endpoint=request.url.path
+            ).observe(elapsed)
 
 
 def metrics_response() -> Response:
@@ -56,4 +61,6 @@ def metrics_response() -> Response:
             content='# HELP verialign_info Prometheus client not installed\n# TYPE verialign_info gauge\nverialign_info{status="disabled"} 1\n',
             media_type="text/plain",
         )
-    return Response(content=generate_latest(REGISTRY), media_type="text/plain; charset=utf-8")
+    return Response(
+        content=generate_latest(REGISTRY), media_type="text/plain; charset=utf-8"
+    )

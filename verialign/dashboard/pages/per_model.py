@@ -29,8 +29,13 @@ def render(df: pd.DataFrame):
     with col3:
         if "confidence" in filtered_df.columns:
             avg_conf = filtered_df["confidence"].mean()
-        elif "supported" in filtered_df.columns and "total_claims" in filtered_df.columns:
-            avg_conf = filtered_df["supported"].sum() / filtered_df["total_claims"].replace(0, 1).sum()
+        elif (
+            "supported" in filtered_df.columns and "total_claims" in filtered_df.columns
+        ):
+            avg_conf = (
+                filtered_df["supported"].sum()
+                / filtered_df["total_claims"].replace(0, 1).sum()
+            )
         else:
             avg_conf = 0
         st.metric("Avg Confidence", f"{avg_conf:.2f}")
@@ -39,7 +44,11 @@ def render(df: pd.DataFrame):
 
     st.subheader("Claim Status Distribution")
     status_cols = ["supported", "unsupported", "unclear", "partially_supported"]
-    status_data = {col: int(filtered_df.get(col, pd.Series([0])).sum()) for col in status_cols if col in filtered_df.columns}
+    status_data = {
+        col: int(filtered_df.get(col, pd.Series([0])).sum())
+        for col in status_cols
+        if col in filtered_df.columns
+    }
     if status_data:
         render_status_pie(status_data, f"Status Distribution - {selected_model}")
 

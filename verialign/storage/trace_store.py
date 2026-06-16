@@ -9,7 +9,10 @@ from verialign.proxy.config import get_settings
 
 
 SENSITIVE_PATTERNS = [
-    (re.compile(r"(?i)Authorization\s*:\s*Bearer\s+[A-Za-z0-9\-_]+"), "Authorization: Bearer [REDACTED]"),
+    (
+        re.compile(r"(?i)Authorization\s*:\s*Bearer\s+[A-Za-z0-9\-_]+"),
+        "Authorization: Bearer [REDACTED]",
+    ),
     (re.compile(r"(?i)Bearer\s+[A-Za-z0-9\-_]{8,}"), "Bearer [REDACTED]"),
     (re.compile(r"(?i)(api[_-]?key|secret|password|token)\s*[:=]\s*\S+"), "[REDACTED]"),
     (re.compile(r"(?i)sk-[A-Za-z0-9]{32,}"), "[REDACTED]"),
@@ -40,9 +43,18 @@ class TraceStore:
             self.redact = redact
         self._init_db()
 
-    def write_trace(self, request_payload: dict, response_payload: dict, verification: VerificationResult) -> None:
-        request_to_store = redact_sensitive_data(request_payload) if self.redact else request_payload
-        response_to_store = redact_sensitive_data(response_payload) if self.redact else response_payload
+    def write_trace(
+        self,
+        request_payload: dict,
+        response_payload: dict,
+        verification: VerificationResult,
+    ) -> None:
+        request_to_store = (
+            redact_sensitive_data(request_payload) if self.redact else request_payload
+        )
+        response_to_store = (
+            redact_sensitive_data(response_payload) if self.redact else response_payload
+        )
 
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(

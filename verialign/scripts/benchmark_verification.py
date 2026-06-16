@@ -25,7 +25,12 @@ BENCHMARK_CASES = [
     ),
     VerificationBenchmarkCase(
         text="Water boils at 100 degrees Celsius.",
-        context=[{"id": "doc-1", "text": "At standard pressure, water boils at 100 degrees Celsius."}],
+        context=[
+            {
+                "id": "doc-1",
+                "text": "At standard pressure, water boils at 100 degrees Celsius.",
+            }
+        ],
         expected_status="supported",
     ),
     VerificationBenchmarkCase(
@@ -35,34 +40,56 @@ BENCHMARK_CASES = [
     ),
     VerificationBenchmarkCase(
         text="Python was created by Guido van Rossum.",
-        context=[{"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."}],
+        context=[
+            {"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."}
+        ],
         expected_status="supported",
     ),
     VerificationBenchmarkCase(
         text="Python was created by Linus Torvalds.",
-        context=[{"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."}],
+        context=[
+            {"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."}
+        ],
         expected_status="unsupported",
     ),
     VerificationBenchmarkCase(
         text="The system handles authentication.",
-        context=[{"id": "doc-1", "text": "The system uses JWT for authentication and RBAC for authorization."}],
+        context=[
+            {
+                "id": "doc-1",
+                "text": "The system uses JWT for authentication and RBAC for authorization.",
+            }
+        ],
         expected_status="supported",
     ),
     VerificationBenchmarkCase(
         text="The system uses bcrypt for password hashing.",
-        context=[{"id": "doc-1", "text": "Passwords are stored as bcrypt hashes with a cost factor of 12."}],
+        context=[
+            {
+                "id": "doc-1",
+                "text": "Passwords are stored as bcrypt hashes with a cost factor of 12.",
+            }
+        ],
         expected_status="supported",
     ),
     VerificationBenchmarkCase(
         text="Mount Everest is 29,029 feet tall.",
         context=[
-            {"id": "doc-1", "text": "Mount Everest's height was officially recognized as 8,848 meters (29,029 ft) in 2020."}
+            {
+                "id": "doc-1",
+                "text": "Mount Everest's height was officially recognized as 8,848 meters (29,029 ft) in 2020.",
+            }
         ],
         expected_status="supported",
     ),
     VerificationBenchmarkCase(
         text="Tokyo has a population of 9 million.",
-        context=[{"id": "doc-1", "text": "The Tokyo prefecture has a population of approximately 14 million people."}],
+        context=[
+            {
+                "id": "doc-1",
+                "text": "The Tokyo prefecture has a population of approximately 14 million people.",
+            }
+        ],
         expected_status="unsupported",
     ),
 ]
@@ -130,7 +157,9 @@ def print_results(result: BenchmarkResult) -> None:
     print("Per-status breakdown:")
     for status, stats in sorted(result.by_status.items()):
         acc = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
-        print(f"  {status:20s}: {stats['correct']}/{stats['total']} correct ({acc:.1%})")
+        print(
+            f"  {status:20s}: {stats['correct']}/{stats['total']} correct ({acc:.1%})"
+        )
     print("=" * 60)
 
 

@@ -8,9 +8,31 @@ from verialign.verification.web_grounder import WebGrounder
 _WORD = re.compile(r"[a-z0-9]+")
 
 STOPWORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "been", "but", "by",
-    "for", "from", "in", "is", "it", "of", "on", "or", "that", "the",
-    "this", "to", "was", "were", "with",
+    "a",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "but",
+    "by",
+    "for",
+    "from",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "this",
+    "to",
+    "was",
+    "were",
+    "with",
 }
 
 
@@ -25,6 +47,7 @@ class EmbeddingMatcher:
         self._initialized = True
         try:
             from sentence_transformers import SentenceTransformer
+
             self._encoder = SentenceTransformer("all-MiniLM-L6-v2")
         except ImportError:
             self._encoder = None
@@ -60,6 +83,7 @@ class TFIDFMatcher:
         self._initialized = True
         try:
             from sklearn.feature_extraction.text import TfidfVectorizer
+
             self._vectorizer = TfidfVectorizer(
                 analyzer="char",
                 ngram_range=(2, 4),
@@ -94,7 +118,12 @@ class TFIDFMatcher:
 
 
 class SourceGrounder:
-    def __init__(self, use_semantic: bool = True, web_api_key: str | None = None, web_provider: str = "tavily") -> None:
+    def __init__(
+        self,
+        use_semantic: bool = True,
+        web_api_key: str | None = None,
+        web_provider: str = "tavily",
+    ) -> None:
         self.use_semantic = use_semantic
         self._embedding_matcher: EmbeddingMatcher | None = None
         self._tfidf_matcher: TFIDFMatcher | None = None
@@ -114,7 +143,9 @@ class SourceGrounder:
             self._tfidf_matcher = TFIDFMatcher()
         return self._tfidf_matcher
 
-    async def ground(self, claim: str, raw_context: object) -> tuple[str, float, list[SourceMatch]]:
+    async def ground(
+        self, claim: str, raw_context: object
+    ) -> tuple[str, float, list[SourceMatch]]:
         context = self._normalize_context(raw_context)
         matches: list[SourceMatch] = []
 
@@ -140,7 +171,9 @@ class SourceGrounder:
             return "unsupported", top_score, matches[:3]
         return "unclear", top_score, matches[:3]
 
-    def _match_against_context(self, claim: str, context: list[tuple[str, str]], claim_terms: set[str]) -> list[SourceMatch]:
+    def _match_against_context(
+        self, claim: str, context: list[tuple[str, str]], claim_terms: set[str]
+    ) -> list[SourceMatch]:
         matches: list[SourceMatch] = []
         context_texts = [c[1] for c in context]
 
@@ -162,14 +195,25 @@ class SourceGrounder:
                 combined = keyword_score
 
             if combined > 0:
-                matches.append(SourceMatch(source_id=source_id, score=round(combined, 3), excerpt=text[:240]))
+                matches.append(
+                    SourceMatch(
+                        source_id=source_id,
+                        score=round(combined, 3),
+                        excerpt=text[:240],
+                    )
+                )
         return matches
 
-    def _compute_semantic_scores(self, claim: str, context_texts: list[str]) -> list[float]:
+    def _compute_semantic_scores(
+        self, claim: str, context_texts: list[str]
+    ) -> list[float]:
         embeddings = self.embedding_matcher.encode([claim] + context_texts)
         if embeddings is not None:
             claim_emb = embeddings[0]
-            return [self.embedding_matcher.cosine_similarity(claim_emb, ctx_emb) for ctx_emb in embeddings[1:]]
+            return [
+                self.embedding_matcher.cosine_similarity(claim_emb, ctx_emb)
+                for ctx_emb in embeddings[1:]
+            ]
 
         tfidf_scores = self.tfidf_matcher.compute_similarity(claim, context_texts)
         if any(s > 0 for s in tfidf_scores):
@@ -194,4 +238,8 @@ class SourceGrounder:
         return normalized
 
     def _terms(self, text: str) -> set[str]:
-        return {word for word in _WORD.findall(text.lower()) if word not in STOPWORDS and len(word) > 2}
+        return {
+            word
+            for word in _WORD.findall(text.lower())
+            if word not in STOPWORDS and len(word) > 2
+        }

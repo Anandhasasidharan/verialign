@@ -68,11 +68,13 @@ class WebGrounder:
 
         results: list[SourceMatch] = []
         for i, item in enumerate(data.get("results", [])):
-            results.append(SourceMatch(
-                source_id=item.get("url", f"web-{i}"),
-                score=round(item.get("score", 0.5) if "score" in item else 0.5, 3),
-                excerpt=(item.get("content") or item.get("title") or "")[:240],
-            ))
+            results.append(
+                SourceMatch(
+                    source_id=item.get("url", f"web-{i}"),
+                    score=round(item.get("score", 0.5) if "score" in item else 0.5, 3),
+                    excerpt=(item.get("content") or item.get("title") or "")[:240],
+                )
+            )
         return results
 
     async def _search_serpapi(self, claim: str, max_results: int) -> list[SourceMatch]:
@@ -84,15 +86,19 @@ class WebGrounder:
         }
 
         async with httpx.AsyncClient() as client:
-            resp = await client.get("https://serpapi.com/search", params=params, timeout=15.0)
+            resp = await client.get(
+                "https://serpapi.com/search", params=params, timeout=15.0
+            )
             resp.raise_for_status()
             data = resp.json()
 
         results: list[SourceMatch] = []
         for i, item in enumerate(data.get("organic_results", [])[:max_results]):
-            results.append(SourceMatch(
-                source_id=item.get("link", f"web-{i}"),
-                score=0.5,
-                excerpt=(item.get("snippet") or item.get("title") or "")[:240],
-            ))
+            results.append(
+                SourceMatch(
+                    source_id=item.get("link", f"web-{i}"),
+                    score=0.5,
+                    excerpt=(item.get("snippet") or item.get("title") or "")[:240],
+                )
+            )
         return results

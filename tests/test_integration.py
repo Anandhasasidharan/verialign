@@ -37,7 +37,10 @@ def test_demo_chat_completion_full_flow(tmp_path, monkeypatch):
             "messages": [{"role": "user", "content": "What is VeriAlign?"}],
             "metadata": {
                 "context": [
-                    {"id": "doc-1", "text": "VeriAlign is a verification support proxy for LLM outputs."}
+                    {
+                        "id": "doc-1",
+                        "text": "VeriAlign is a verification support proxy for LLM outputs.",
+                    }
                 ]
             },
             "temperature": 0.7,

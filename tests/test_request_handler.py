@@ -1,5 +1,9 @@
 import pytest
-from verialign.proxy.middleware.request_handler import validate_request, build_upstream_payload, ValidatedRequest
+from verialign.proxy.middleware.request_handler import (
+    validate_request,
+    build_upstream_payload,
+    ValidatedRequest,
+)
 
 
 class TestRequestHandler:
@@ -47,7 +51,9 @@ class TestRequestHandler:
             "messages": [{"role": "user", "content": "Hello"}],
             "temperature": 3.0,
         }
-        with pytest.raises(ValueError, match="temperature must be a number between 0 and 2"):
+        with pytest.raises(
+            ValueError, match="temperature must be a number between 0 and 2"
+        ):
             validate_request(payload)
 
     def test_validate_request_max_tokens_invalid(self):
@@ -83,7 +89,9 @@ class TestRequestHandler:
             "messages": [{"role": "user", "content": "Hello"}],
             "tool_choice": 123,
         }
-        with pytest.raises(ValueError, match="tool_choice must be a string, object, or null"):
+        with pytest.raises(
+            ValueError, match="tool_choice must be a string, object, or null"
+        ):
             validate_request(payload)
 
     def test_validate_request_response_format_not_dict(self):

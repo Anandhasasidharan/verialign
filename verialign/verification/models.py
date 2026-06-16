@@ -8,7 +8,11 @@ class SourceMatch:
     excerpt: str
 
     def to_dict(self) -> dict:
-        return {"source_id": self.source_id, "score": self.score, "excerpt": self.excerpt}
+        return {
+            "source_id": self.source_id,
+            "score": self.score,
+            "excerpt": self.excerpt,
+        }
 
 
 @dataclass(frozen=True)
@@ -74,9 +78,13 @@ class VerificationResult:
         return {
             "total_claims": len(self.claims),
             "supported": sum(1 for claim in self.claims if claim.status == "supported"),
-            "unsupported": sum(1 for claim in self.claims if claim.status == "unsupported"),
+            "unsupported": sum(
+                1 for claim in self.claims if claim.status == "unsupported"
+            ),
             "unclear": sum(1 for claim in self.claims if claim.status == "unclear"),
-            "partially_supported": sum(1 for claim in self.claims if claim.status == "partially_supported"),
+            "partially_supported": sum(
+                1 for claim in self.claims if claim.status == "partially_supported"
+            ),
             "contradictions_found": len(self.contradictions),
             "checklist_items": len(self.checklist),
         }

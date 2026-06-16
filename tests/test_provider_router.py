@@ -1,5 +1,10 @@
 import pytest
-from verialign.proxy.routing.provider_router import ProviderRouter, OpenAIProvider, AnthropicProvider, LocalProvider
+from verialign.proxy.routing.provider_router import (
+    ProviderRouter,
+    OpenAIProvider,
+    AnthropicProvider,
+    LocalProvider,
+)
 from verialign.proxy.config import Settings
 
 

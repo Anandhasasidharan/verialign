@@ -33,6 +33,7 @@ def load_traces(limit: int = 100):
 
     def parse_verification(row):
         import json
+
         try:
             v = json.loads(row["verification_json"])
             return v.get("summary", {})
@@ -58,7 +59,14 @@ def render_sidebar():
     st.sidebar.markdown("**Navigation**")
     page = st.sidebar.radio(
         "Select page",
-        ["Overview", "Per Model", "Per Task", "Drift", "Contradictions", "Trace Detail"],
+        [
+            "Overview",
+            "Per Model",
+            "Per Task",
+            "Drift",
+            "Contradictions",
+            "Trace Detail",
+        ],
         label_visibility="collapsed",
     )
 
@@ -74,7 +82,9 @@ def render_overview(df):
     st.header("📊 Overview")
 
     if df.empty:
-        st.info("No traces found. Make some requests through VeriAlign to see data here.")
+        st.info(
+            "No traces found. Make some requests through VeriAlign to see data here."
+        )
         return
 
     col1, col2, col3, col4 = st.columns(4)
@@ -101,7 +111,11 @@ def render_overview(df):
     with col1:
         st.subheader("Claims by Status")
         status_cols = ["supported", "unsupported", "unclear", "partially_supported"]
-        status_data = {col: int(df.get(col, pd.Series([0])).sum()) for col in status_cols if col in df.columns}
+        status_data = {
+            col: int(df.get(col, pd.Series([0])).sum())
+            for col in status_cols
+            if col in df.columns
+        }
         if status_data:
             st.bar_chart(status_data)
 
@@ -135,12 +149,20 @@ def render_per_model(df):
         total_claims = filtered_df.get("total_claims", pd.Series([0])).sum()
         st.metric("Total Claims", int(total_claims))
     with col3:
-        avg_conf = filtered_df.get("confidence", pd.Series([0])).mean() if "confidence" in filtered_df.columns else 0
+        avg_conf = (
+            filtered_df.get("confidence", pd.Series([0])).mean()
+            if "confidence" in filtered_df.columns
+            else 0
+        )
         st.metric("Avg Confidence", f"{avg_conf:.2f}")
 
     st.subheader("Claim Status Distribution")
     status_cols = ["supported", "unsupported", "unclear", "partially_supported"]
-    status_data = {col: int(filtered_df.get(col, pd.Series([0])).sum()) for col in status_cols if col in filtered_df.columns}
+    status_data = {
+        col: int(filtered_df.get(col, pd.Series([0])).sum())
+        for col in status_cols
+        if col in filtered_df.columns
+    }
     if status_data:
         st.bar_chart(status_data)
 
@@ -160,6 +182,7 @@ def render_per_task(df):
 
     def classify_task(row):
         import json
+
         try:
             req = json.loads(row["request_json"])
             messages = req.get("messages", [])
@@ -170,10 +193,50 @@ def render_per_task(df):
                     break
 
             keywords = {
-                "coding": ["code", "function", "class", "api", "bug", "debug", "implement", "refactor", "python", "javascript", "sql"],
-                "writing": ["write", "essay", "article", "blog", "email", "story", "creative", "copy", "content"],
-                "analysis": ["analyze", "compare", "evaluate", "assess", "review", "critique", "examine"],
-                "question_answering": ["what", "how", "why", "when", "where", "who", "explain", "define", "describe"],
+                "coding": [
+                    "code",
+                    "function",
+                    "class",
+                    "api",
+                    "bug",
+                    "debug",
+                    "implement",
+                    "refactor",
+                    "python",
+                    "javascript",
+                    "sql",
+                ],
+                "writing": [
+                    "write",
+                    "essay",
+                    "article",
+                    "blog",
+                    "email",
+                    "story",
+                    "creative",
+                    "copy",
+                    "content",
+                ],
+                "analysis": [
+                    "analyze",
+                    "compare",
+                    "evaluate",
+                    "assess",
+                    "review",
+                    "critique",
+                    "examine",
+                ],
+                "question_answering": [
+                    "what",
+                    "how",
+                    "why",
+                    "when",
+                    "where",
+                    "who",
+                    "explain",
+                    "define",
+                    "describe",
+                ],
                 "summarization": ["summarize", "summary", "tldr", "brief", "condense"],
                 "translation": ["translate", "translation", "language"],
             }
@@ -187,13 +250,23 @@ def render_per_task(df):
 
     df["task"] = df.apply(classify_task, axis=1)
 
-    task_stats = df.groupby("task").agg(
-        requests=("id", "count"),
-        total_claims=("total_claims", "sum") if "total_claims" in df.columns else ("id", "count"),
-        supported=("supported", "sum") if "supported" in df.columns else ("id", "count"),
-        unsupported=("unsupported", "sum") if "unsupported" in df.columns else ("id", "count"),
-        unclear=("unclear", "sum") if "unclear" in df.columns else ("id", "count"),
-    ).reset_index()
+    task_stats = (
+        df.groupby("task")
+        .agg(
+            requests=("id", "count"),
+            total_claims=("total_claims", "sum")
+            if "total_claims" in df.columns
+            else ("id", "count"),
+            supported=("supported", "sum")
+            if "supported" in df.columns
+            else ("id", "count"),
+            unsupported=("unsupported", "sum")
+            if "unsupported" in df.columns
+            else ("id", "count"),
+            unclear=("unclear", "sum") if "unclear" in df.columns else ("id", "count"),
+        )
+        .reset_index()
+    )
 
     st.dataframe(task_stats, use_container_width=True)
 
@@ -207,11 +280,19 @@ def render_drift(df):
 
     df["date"] = pd.to_datetime(df["created_at"]).dt.date
 
-    daily = df.groupby("date").agg(
-        requests=("id", "count"),
-        total_claims=("total_claims", "sum") if "total_claims" in df.columns else ("id", "count"),
-        supported=("supported", "sum") if "supported" in df.columns else ("id", "count"),
-    ).reset_index()
+    daily = (
+        df.groupby("date")
+        .agg(
+            requests=("id", "count"),
+            total_claims=("total_claims", "sum")
+            if "total_claims" in df.columns
+            else ("id", "count"),
+            supported=("supported", "sum")
+            if "supported" in df.columns
+            else ("id", "count"),
+        )
+        .reset_index()
+    )
 
     if len(daily) > 1:
         st.subheader("Requests per Day")
@@ -221,7 +302,9 @@ def render_drift(df):
         st.line_chart(daily.set_index("date")["supported"])
 
         if "total_claims" in daily.columns and daily["total_claims"].sum() > 0:
-            daily["support_rate"] = daily["supported"] / daily["total_claims"].replace(0, 1)
+            daily["support_rate"] = daily["supported"] / daily["total_claims"].replace(
+                0, 1
+            )
             st.subheader("Support Rate Over Time")
             st.line_chart(daily.set_index("date")["support_rate"])
     else:
@@ -238,6 +321,7 @@ def render_contradictions(df):
     all_contradictions = []
     for _, row in df.iterrows():
         import json
+
         try:
             v = json.loads(row["verification_json"])
             contradictions = v.get("contradictions", [])
@@ -261,7 +345,15 @@ def render_contradictions(df):
         st.bar_chart(contra_df["type"].value_counts())
 
     st.subheader("Recent Contradictions")
-    display_cols = ["trace_id", "model", "created_at", "type", "confidence", "claim_a", "claim_b"]
+    display_cols = [
+        "trace_id",
+        "model",
+        "created_at",
+        "type",
+        "confidence",
+        "claim_a",
+        "claim_b",
+    ]
     available_cols = [c for c in display_cols if c in contra_df.columns]
     st.dataframe(contra_df[available_cols].head(50), use_container_width=True)
 
@@ -282,6 +374,7 @@ def render_trace_detail(df):
     with col1:
         st.subheader("Request")
         import json
+
         st.json(json.loads(trace["request_json"]))
 
     with col2:
@@ -291,6 +384,7 @@ def render_trace_detail(df):
     st.divider()
     st.subheader("Verification")
     import json
+
     verification = json.loads(trace["verification_json"])
 
     st.json(verification)
@@ -299,7 +393,10 @@ def render_trace_detail(df):
         st.subheader("Claims")
         claims_df = pd.DataFrame(verification["claims"])
         if not claims_df.empty:
-            st.dataframe(claims_df[["claim_id", "text", "status", "confidence"]], use_container_width=True)
+            st.dataframe(
+                claims_df[["claim_id", "text", "status", "confidence"]],
+                use_container_width=True,
+            )
 
     if verification.get("contradictions"):
         st.subheader("Contradictions")
@@ -308,8 +405,12 @@ def render_trace_detail(df):
     if verification.get("checklist"):
         st.subheader("Verification Checklist")
         for item in verification["checklist"]:
-            priority_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(item.get("priority", ""), "⚪")
-            st.markdown(f"{priority_color} **{item['category']}**: {item['description']}")
+            priority_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
+                item.get("priority", ""), "⚪"
+            )
+            st.markdown(
+                f"{priority_color} **{item['category']}**: {item['description']}"
+            )
 
 
 def main():

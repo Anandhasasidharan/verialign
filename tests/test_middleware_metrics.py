@@ -4,7 +4,8 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from verialign.proxy.middleware.metrics_middleware import (
-    MetricsMiddleware, metrics_response,
+    MetricsMiddleware,
+    metrics_response,
 )
 
 

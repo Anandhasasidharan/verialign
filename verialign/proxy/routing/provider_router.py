@@ -69,7 +69,12 @@ class OpenAIProvider(BaseProvider):
         }
 
         client = get_http_client()
-        response = await client.post(url, headers=headers, json=payload, timeout=self.settings.upstream_timeout_seconds)
+        response = await client.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=self.settings.upstream_timeout_seconds,
+        )
 
         if response.status_code >= 400:
             raise ProviderError(
@@ -77,7 +82,9 @@ class OpenAIProvider(BaseProvider):
                 status_code=response.status_code,
                 provider=self.get_provider_name(),
             )
-        return ProviderResponse(data=response.json(), provider_name=self.get_provider_name())
+        return ProviderResponse(
+            data=response.json(), provider_name=self.get_provider_name()
+        )
 
     async def chat_completions_stream(self, payload: dict) -> ProviderResponse:
         url = self.settings.upstream_base_url.rstrip("/") + "/chat/completions"
@@ -87,20 +94,30 @@ class OpenAIProvider(BaseProvider):
         }
         stream_payload = {**payload, "stream": True}
         client = get_http_client()
-        response = await client.post(url, headers=headers, json=stream_payload, timeout=self.settings.upstream_timeout_seconds)
+        response = await client.post(
+            url,
+            headers=headers,
+            json=stream_payload,
+            timeout=self.settings.upstream_timeout_seconds,
+        )
         if response.status_code >= 400:
             raise ProviderError(
                 response.text,
                 status_code=response.status_code,
                 provider=self.get_provider_name(),
             )
-        return ProviderResponse(data={"raw_response": response, "is_stream": True}, provider_name=self.get_provider_name())
+        return ProviderResponse(
+            data={"raw_response": response, "is_stream": True},
+            provider_name=self.get_provider_name(),
+        )
 
 
 class AnthropicProvider(BaseProvider):
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.base_url = os.getenv("VERIALIGN_ANTHROPIC_BASE_URL", "https://api.anthropic.com")
+        self.base_url = os.getenv(
+            "VERIALIGN_ANTHROPIC_BASE_URL", "https://api.anthropic.com"
+        )
         self.api_key = os.getenv("VERIALIGN_ANTHROPIC_API_KEY")
 
     def is_configured(self) -> bool:
@@ -120,7 +137,12 @@ class AnthropicProvider(BaseProvider):
         anthropic_payload = self._convert_to_anthropic(payload)
 
         client = get_http_client()
-        response = await client.post(url, headers=headers, json=anthropic_payload, timeout=self.settings.upstream_timeout_seconds)
+        response = await client.post(
+            url,
+            headers=headers,
+            json=anthropic_payload,
+            timeout=self.settings.upstream_timeout_seconds,
+        )
 
         if response.status_code >= 400:
             raise ProviderError(
@@ -130,8 +152,12 @@ class AnthropicProvider(BaseProvider):
             )
 
         anthropic_response = response.json()
-        openai_response = self._convert_from_anthropic(anthropic_response, payload.get("model", "claude"))
-        return ProviderResponse(data=openai_response, provider_name=self.get_provider_name())
+        openai_response = self._convert_from_anthropic(
+            anthropic_response, payload.get("model", "claude")
+        )
+        return ProviderResponse(
+            data=openai_response, provider_name=self.get_provider_name()
+        )
 
     def _convert_to_anthropic(self, payload: dict) -> dict:
         messages = payload.get("messages", [])
@@ -162,7 +188,12 @@ class AnthropicProvider(BaseProvider):
         if isinstance(created_at, str):
             try:
                 from datetime import datetime
-                created_at = int(datetime.fromisoformat(created_at.replace("Z", "+00:00")).timestamp())
+
+                created_at = int(
+                    datetime.fromisoformat(
+                        created_at.replace("Z", "+00:00")
+                    ).timestamp()
+                )
             except Exception:
                 created_at = 0
         elif not isinstance(created_at, int):
@@ -183,7 +214,8 @@ class AnthropicProvider(BaseProvider):
             "usage": {
                 "prompt_tokens": response.get("usage", {}).get("input_tokens", 0),
                 "completion_tokens": response.get("usage", {}).get("output_tokens", 0),
-                "total_tokens": response.get("usage", {}).get("input_tokens", 0) + response.get("usage", {}).get("output_tokens", 0),
+                "total_tokens": response.get("usage", {}).get("input_tokens", 0)
+                + response.get("usage", {}).get("output_tokens", 0),
             },
         }
 
@@ -202,7 +234,11 @@ class LocalProvider(BaseProvider):
 
     async def chat_completions(self, payload: dict) -> ProviderResponse:
         if not self.base_url:
-            raise ProviderError("Local provider not configured", status_code=503, provider=self.get_provider_name())
+            raise ProviderError(
+                "Local provider not configured",
+                status_code=503,
+                provider=self.get_provider_name(),
+            )
 
         url = f"{self.base_url}/v1/chat/completions"
         headers = {"content-type": "application/json"}
@@ -210,7 +246,12 @@ class LocalProvider(BaseProvider):
             headers["authorization"] = f"Bearer {self.api_key}"
 
         client = get_http_client()
-        response = await client.post(url, headers=headers, json=payload, timeout=self.settings.upstream_timeout_seconds)
+        response = await client.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=self.settings.upstream_timeout_seconds,
+        )
 
         if response.status_code >= 400:
             raise ProviderError(
@@ -218,11 +259,15 @@ class LocalProvider(BaseProvider):
                 status_code=response.status_code,
                 provider=self.get_provider_name(),
             )
-        return ProviderResponse(data=response.json(), provider_name=self.get_provider_name())
+        return ProviderResponse(
+            data=response.json(), provider_name=self.get_provider_name()
+        )
 
 
 class ProviderError(Exception):
-    def __init__(self, message: str, status_code: int = 502, provider: str = "unknown") -> None:
+    def __init__(
+        self, message: str, status_code: int = 502, provider: str = "unknown"
+    ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.provider = provider
@@ -246,7 +291,9 @@ class ProviderRouter:
                 return provider
         return None
 
-    async def chat_completions(self, payload: dict, preferred_provider: str | None = None) -> ProviderResponse:
+    async def chat_completions(
+        self, payload: dict, preferred_provider: str | None = None
+    ) -> ProviderResponse:
         providers = self.get_configured_providers()
         if not providers:
             return self._demo_response(payload)
@@ -258,7 +305,9 @@ class ProviderRouter:
 
         return await providers[0].chat_completions(payload)
 
-    async def chat_completions_stream(self, payload: dict, preferred_provider: str | None = None):
+    async def chat_completions_stream(
+        self, payload: dict, preferred_provider: str | None = None
+    ):
         providers = self.get_configured_providers()
         if not providers:
             async for chunk in self._demo_stream(payload):
@@ -301,9 +350,22 @@ class ProviderRouter:
             "created": created,
             "model": model,
         }
-        yield {**base_chunk, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]}
-        yield {**base_chunk, "choices": [{"index": 0, "delta": {"content": content}, "finish_reason": None}]}
-        yield {**base_chunk, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+        yield {
+            **base_chunk,
+            "choices": [
+                {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}
+            ],
+        }
+        yield {
+            **base_chunk,
+            "choices": [
+                {"index": 0, "delta": {"content": content}, "finish_reason": None}
+            ],
+        }
+        yield {
+            **base_chunk,
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        }
 
     def _demo_response(self, payload: dict) -> ProviderResponse:
         import time
@@ -335,7 +397,11 @@ class ProviderRouter:
                         "finish_reason": "stop",
                     }
                 ],
-                "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                },
             },
             provider_name="demo",
         )

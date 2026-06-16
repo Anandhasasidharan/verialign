@@ -5,11 +5,30 @@ from verialign.verification.models import Contradiction
 
 class ContradictionDetector:
     NEGATION_PATTERNS = [
-        (re.compile(r"\b(is|are|was|were)\b"), re.compile(r"\b(is not|are not|was not|were not|isn't|aren't|wasn't|weren't)\b")),
-        (re.compile(r"\b(can|will|does|do|did)\b"), re.compile(r"\b(cannot|can't|will not|won't|does not|doesn't|do not|don't|did not|didn't)\b")),
-        (re.compile(r"\b(has|have|had)\b"), re.compile(r"\b(has not|have not|had not|hasn't|haven't|hadn't)\b")),
-        (re.compile(r"\b(always|all|every|everyone|everything)\b"), re.compile(r"\b(never|none|no one|nothing)\b")),
-        (re.compile(r"\b(must|should|need to)\b"), re.compile(r"\b(must not|mustn't|should not|shouldn't|need not|needn't)\b")),
+        (
+            re.compile(r"\b(is|are|was|were)\b"),
+            re.compile(
+                r"\b(is not|are not|was not|were not|isn't|aren't|wasn't|weren't)\b"
+            ),
+        ),
+        (
+            re.compile(r"\b(can|will|does|do|did)\b"),
+            re.compile(
+                r"\b(cannot|can't|will not|won't|does not|doesn't|do not|don't|did not|didn't)\b"
+            ),
+        ),
+        (
+            re.compile(r"\b(has|have|had)\b"),
+            re.compile(r"\b(has not|have not|had not|hasn't|haven't|hadn't)\b"),
+        ),
+        (
+            re.compile(r"\b(always|all|every|everyone|everything)\b"),
+            re.compile(r"\b(never|none|no one|nothing)\b"),
+        ),
+        (
+            re.compile(r"\b(must|should|need to)\b"),
+            re.compile(r"\b(must not|mustn't|should not|shouldn't|need not|needn't)\b"),
+        ),
     ]
 
     VERB_ANTONYMS = {
@@ -47,7 +66,7 @@ class ContradictionDetector:
         contradictions: list[Contradiction] = []
 
         for i, claim_a in enumerate(claims):
-            for claim_b in claims[i + 1:]:
+            for claim_b in claims[i + 1 :]:
                 contradiction = self._check_pair(claim_a, claim_b)
                 if contradiction:
                     contradictions.append(contradiction)
@@ -135,7 +154,30 @@ class ContradictionDetector:
         if len(common) >= 2:
             return True
 
-        stopwords = {"the", "and", "or", "but", "not", "is", "are", "was", "were", "has", "have", "had", "can", "will", "does", "do", "did", "this", "that", "with", "for", "from"}
+        stopwords = {
+            "the",
+            "and",
+            "or",
+            "but",
+            "not",
+            "is",
+            "are",
+            "was",
+            "were",
+            "has",
+            "have",
+            "had",
+            "can",
+            "will",
+            "does",
+            "do",
+            "did",
+            "this",
+            "that",
+            "with",
+            "for",
+            "from",
+        }
         words_a_filtered = words_a - stopwords
         words_b_filtered = words_b - stopwords
 
