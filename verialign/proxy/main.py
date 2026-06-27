@@ -1,6 +1,5 @@
 import json
 import logging
-from functools import lru_cache
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -37,10 +36,13 @@ from verialign.proxy.middleware.metrics_middleware import (
     metrics_response,
 )
 from verialign.proxy.middleware.request_timeout import RequestTimeoutMiddleware
+from verialign.proxy.middleware.safety_middleware import SafetyMiddleware
+from verialign.proxy.admin import router as admin_router
 from verialign.storage.store_factory import create_trace_store
 from verialign.storage.async_trace_store import AsyncTraceStore
 from verialign.storage.trace_store import TraceStore
 from verialign.verification.engine import VerificationEngine
+from verialign.verification.valkey_cache import ValkeyCache
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,36 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     configure_logging()
     settings = get_settings()
+
+    if settings.sentry_dsn:
+        try:
+            import sentry_sdk
+
+            sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.1)
+            logger.info("sentry_initialized")
+        except Exception:
+            logger.exception("sentry_init_failed")
+
+    if settings.enable_otel:
+        try:
+            from opentelemetry import trace
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter,
+            )
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+            provider = TracerProvider(
+                resource=Resource.create({"service.name": "verialign"})
+            )
+            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+            trace.set_tracer_provider(provider)
+            FastAPIInstrumentor.instrument_app(app)
+            logger.info("otel_initialized")
+        except Exception:
+            logger.exception("otel_init_failed")
     limiter = RateLimiter(
         RateLimitConfig(
             requests_per_minute=settings.rate_limit_requests_per_minute,
@@ -77,6 +109,11 @@ async def lifespan(app: FastAPI):
     if isinstance(store, AsyncTraceStore):
         await store.initialize()
     app.state.trace_store = store
+
+    if settings.valkey_url:
+        app.state.cache = ValkeyCache()
+    else:
+        app.state.cache = None
 
     yield
 
@@ -126,6 +163,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(
+    SafetyMiddleware,
+    pii_redact=settings_at_startup.safety_pii_redact_enabled,
+    jailbreak_block=settings_at_startup.safety_jailbreak_enabled,
+    toxicity_block=settings_at_startup.safety_toxicity_enabled,
+)
+app.include_router(admin_router)
 
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
@@ -255,6 +299,7 @@ async def _handle_streaming(
                     llm_client=llm_client,
                     web_api_key=settings.web_search_api_key,
                     web_provider=settings.web_search_provider,
+                    cache=getattr(app.state, "cache", None),
                 )
                 verification = await verifier.verify(
                     full_text, payload.get("metadata", {}).get("context", [])
@@ -280,11 +325,6 @@ async def _handle_streaming(
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
-
-
-@lru_cache
-def _get_router() -> ProviderRouter:
-    return ProviderRouter(get_settings())
 
 
 @app.post("/v1/chat/completions")
@@ -332,6 +372,7 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         llm_client=llm_client,
         web_api_key=settings.web_search_api_key,
         web_provider=settings.web_search_provider,
+        cache=getattr(app.state, "cache", None),
     )
     response_handler = ResponseHandler(verifier, structured_output=structured)
     augmented = await response_handler.augment(upstream_response, payload)

@@ -57,6 +57,20 @@ class Settings(BaseSettings):
         default=120.0, alias="VERIALIGN_PROXY_TIMEOUT_SECONDS"
     )
 
+    valkey_url: str | None = Field(default=None, alias="VERIALIGN_VALKEY_URL")
+    sentry_dsn: str | None = Field(default=None, alias="VERIALIGN_SENTRY_DSN")
+    enable_otel: bool = Field(default=False, alias="VERIALIGN_ENABLE_OTEL")
+    admin_api_key: str | None = Field(default=None, alias="VERIALIGN_ADMIN_API_KEY")
+    safety_jailbreak_enabled: bool = Field(
+        default=True, alias="VERIALIGN_SAFETY_JAILBREAK_ENABLED"
+    )
+    safety_toxicity_enabled: bool = Field(
+        default=True, alias="VERIALIGN_SAFETY_TOXICITY_ENABLED"
+    )
+    safety_pii_redact_enabled: bool = Field(
+        default=True, alias="VERIALIGN_SAFETY_PII_REDACT_ENABLED"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", populate_by_name=True
     )

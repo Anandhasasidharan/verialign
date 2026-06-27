@@ -22,6 +22,16 @@ async = [
     "sqlalchemy[asyncio]>=2.0.0",
     "asyncpg>=0.29.0",
 ]
+valkey = ["valkey>=6.0.0"]
+sentry = ["sentry-sdk>=2.0.0"]
+otel = [
+    "opentelemetry-api>=1.30.0",
+    "opentelemetry-sdk>=1.30.0",
+    "opentelemetry-instrumentation-fastapi>=0.50.0",
+]
+all = [
+    "verialign[dev,async,valkey,sentry,otel]",
+]
 
 [tool.setuptools.packages.find]
 include = ["verialign*"]

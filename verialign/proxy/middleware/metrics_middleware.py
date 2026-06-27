@@ -9,34 +9,38 @@ logger = logging.getLogger(__name__)
 try:
     from prometheus_client import Counter, Histogram, generate_latest, REGISTRY
 
+    request_count = Counter(
+        "verialign_requests_total",
+        "Total requests",
+        ["method", "endpoint", "status"],
+    )
+
+    request_latency = Histogram(
+        "verialign_request_duration_seconds",
+        "Request latency in seconds",
+        ["method", "endpoint"],
+        buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0),
+    )
+
+    upstream_latency = Histogram(
+        "verialign_upstream_duration_seconds",
+        "Upstream LLM provider latency in seconds",
+        ["provider"],
+        buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0),
+    )
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
+    request_count = None
+    request_latency = None
+    upstream_latency = None
     PROMETHEUS_AVAILABLE = False
-
-
-request_count = Counter(
-    "verialign_requests_total",
-    "Total requests",
-    ["method", "endpoint", "status"],
-)
-
-request_latency = Histogram(
-    "verialign_request_duration_seconds",
-    "Request latency in seconds",
-    ["method", "endpoint"],
-    buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0),
-)
-
-upstream_latency = Histogram(
-    "verialign_upstream_duration_seconds",
-    "Upstream LLM provider latency in seconds",
-    ["provider"],
-    buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0),
-)
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if not PROMETHEUS_AVAILABLE:
+            return await call_next(request)
         start = time.monotonic()
         try:
             response = await call_next(request)

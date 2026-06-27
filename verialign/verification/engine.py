@@ -21,6 +21,7 @@ class VerificationEngine:
         web_api_key: str | None = None,
         web_provider: str = "tavily",
         cache_ttl: int = 300,
+        cache: VerificationCache | None = None,
     ) -> None:
         self.claim_extractor = ClaimExtractor(llm_client=llm_client)
         self.source_grounder = SourceGrounder(
@@ -29,7 +30,7 @@ class VerificationEngine:
         self.contradiction_detector = ContradictionDetector()
         self.confidence_scorer = ConfidenceScorer()
         self.checklist_generator = ChecklistGenerator()
-        self._cache = VerificationCache(ttl_seconds=cache_ttl)
+        self._cache = cache or VerificationCache(ttl_seconds=cache_ttl)
 
     async def verify(
         self, text: str, context: object, response_data: dict | None = None
