@@ -35,6 +35,7 @@ class VerificationCache:
             return
         try:
             from sentence_transformers import SentenceTransformer
+
             self._embedder = SentenceTransformer("all-MiniLM-L6-v2")
         except ImportError:
             self._embedder = False

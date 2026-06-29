@@ -40,9 +40,7 @@ class NLIGrounder:
         self._lazy_init()
         return self._model is not None
 
-    async def score(
-        self, claim: str, context_chunks: list[str]
-    ) -> list[dict]:
+    async def score(self, claim: str, context_chunks: list[str]) -> list[dict]:
         self._lazy_init()
         if self._model is None:
             return []

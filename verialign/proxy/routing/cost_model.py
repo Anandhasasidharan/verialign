@@ -19,9 +19,7 @@ MODEL_PRICING: dict[str, dict[str, float]] = {
 UNKNOWN_RATE = {"input": 1.00, "output": 4.00}
 
 
-def calculate_cost(
-    model: str, input_tokens: int, output_tokens: int
-) -> float | None:
+def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float | None:
     pricing = _find_pricing(model)
     if pricing is None:
         return None
