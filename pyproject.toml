@@ -29,8 +29,12 @@ otel = [
     "opentelemetry-sdk>=1.30.0",
     "opentelemetry-instrumentation-fastapi>=0.50.0",
 ]
+nli = [
+    "transformers>=4.47.0",
+    "torch>=2.0.0",
+]
 all = [
-    "verialign[dev,async,valkey,sentry,otel]",
+    "verialign[dev,async,valkey,sentry,otel,nli]",
 ]
 
 [tool.setuptools.packages.find]
