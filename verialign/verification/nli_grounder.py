@@ -93,11 +93,9 @@ class NLIGrounder:
         max_contradiction = max(s["contradiction"] for s in scores)
         max_entailment = max(s["entailment"] for s in scores)
 
-        top = max(scores, key=lambda s: s["contradiction"])
         if max_contradiction > threshold and max_contradiction > max_entailment:
             return "unsupported", max_contradiction, scores
 
-        top = max(scores, key=lambda s: s["entailment"])
         if max_entailment > threshold:
             return "supported", max_entailment, scores
 

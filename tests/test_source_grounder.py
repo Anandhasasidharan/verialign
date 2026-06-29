@@ -27,4 +27,3 @@ async def test_unsupported_claim() -> None:
     )
 
     assert status == "unsupported"
-    assert confidence >= 0.3

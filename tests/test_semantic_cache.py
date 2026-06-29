@@ -1,5 +1,18 @@
+import pytest
+
 from verialign.verification.verification_cache import VerificationCache
 from verialign.verification.models import VerificationResult, VerifiedClaim
+
+
+_has_st = False
+try:
+    from sentence_transformers import SentenceTransformer  # noqa: F401
+
+    _has_st = True
+except ImportError:
+    pass
+
+semantic = pytest.mark.skipif(not _has_st, reason="sentence_transformers not installed")
 
 
 def _make_result(text: str = "test") -> VerificationResult:
@@ -19,6 +32,7 @@ def _make_result(text: str = "test") -> VerificationResult:
 
 
 class TestSemanticCache:
+    @semantic
     def test_semantic_near_match_hits(self):
         cache = VerificationCache(similarity_threshold=0.5)
         result = _make_result("the capital of France is Paris")
@@ -72,6 +86,7 @@ class TestSemanticCache:
         cached = cache.get("different text")
         assert cached is None
 
+    @semantic
     def test_semantic_with_context(self):
         cache = VerificationCache(similarity_threshold=0.5)
         result = _make_result("summarize the document")

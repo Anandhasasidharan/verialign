@@ -5,12 +5,7 @@ from verialign.proxy.routing.cost_model import (
     list_model_prices,
     _find_pricing,
 )
-from verialign.proxy.routing.provider_router import (
-    ProviderRouter,
-    OpenAIProvider,
-    AnthropicProvider,
-    LocalProvider,
-)
+from verialign.proxy.routing.provider_router import ProviderRouter
 from verialign.proxy.config import Settings
 
 
