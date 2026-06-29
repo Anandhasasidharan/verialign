@@ -25,7 +25,7 @@ class VerificationEngine:
     ) -> None:
         self.claim_extractor = ClaimExtractor(llm_client=llm_client)
         self.source_grounder = SourceGrounder(
-            web_api_key=web_api_key, web_provider=web_provider
+            use_nli=True, web_api_key=web_api_key, web_provider=web_provider
         )
         self.contradiction_detector = ContradictionDetector()
         self.confidence_scorer = ConfidenceScorer()

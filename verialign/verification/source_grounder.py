@@ -3,6 +3,7 @@ import math
 from collections.abc import Iterable
 
 from verialign.verification.models import SourceMatch
+from verialign.verification.nli_grounder import NLIGrounder
 from verialign.verification.web_grounder import WebGrounder
 
 _WORD = re.compile(r"[a-z0-9]+")
@@ -121,6 +122,7 @@ class SourceGrounder:
     def __init__(
         self,
         use_semantic: bool = True,
+        use_nli: bool = True,
         web_api_key: str | None = None,
         web_provider: str = "tavily",
     ) -> None:
@@ -128,6 +130,9 @@ class SourceGrounder:
         self._embedding_matcher: EmbeddingMatcher | None = None
         self._tfidf_matcher: TFIDFMatcher | None = None
         self._web_grounder: WebGrounder | None = None
+        self._nli_grounder: NLIGrounder | None = None
+        if use_nli:
+            self._nli_grounder = NLIGrounder()
         if web_api_key:
             self._web_grounder = WebGrounder(web_api_key, provider=web_provider)
 
@@ -154,12 +159,25 @@ class SourceGrounder:
             if claim_terms:
                 matches = self._match_against_context(claim, context, claim_terms)
 
+        nli_status: str | None = None
+        nli_score: float = 0.0
+        if self._nli_grounder and self._nli_grounder.is_available() and context:
+            context_texts = [c[1] for c in context]
+            nli_result = await self._nli_grounder.ground(claim, context_texts)
+            nli_status, nli_score, _ = nli_result
+            if nli_status == "unsupported" and nli_score > 0.5:
+                return "unsupported", nli_score, matches[:3] if matches else []
+            if nli_status == "supported" and nli_score > 0.5:
+                return "supported", nli_score, matches[:3] if matches else []
+
         if not matches and self._web_grounder and self._web_grounder.is_available():
             web_sources = await self._web_grounder.ground(claim)
             if web_sources:
                 matches = web_sources
 
         if not matches:
+            if nli_status:
+                return nli_status, nli_score, []
             return "unclear", 0.0, []
 
         matches.sort(key=lambda m: m.score, reverse=True)
