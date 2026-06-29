@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -5,6 +6,9 @@ from dataclasses import dataclass
 import httpx
 
 from verialign.proxy.config import Settings
+from verialign.proxy.routing.cost_model import estimate_cost
+
+logger = logging.getLogger(__name__)
 
 _http_client: httpx.AsyncClient | None = None
 
@@ -291,6 +295,46 @@ class ProviderRouter:
                 return provider
         return None
 
+    def select_provider(
+        self, payload: dict, preferred_provider: str | None = None
+    ) -> BaseProvider:
+        providers = self.get_configured_providers()
+        if not providers:
+            raise ProviderError("No providers configured", status_code=503)
+
+        if preferred_provider:
+            provider = self.get_provider(preferred_provider)
+            if provider and provider.is_configured():
+                return provider
+
+        if len(providers) == 1:
+            return providers[0]
+
+        model = payload.get("model", "unknown")
+        messages = payload.get("messages", [])
+        input_tokens = sum(len(m.get("content", "")) // 4 for m in messages)
+
+        candidates: list[tuple[float, BaseProvider]] = []
+        for p in providers:
+            cost = estimate_cost(model, input_tokens)
+            if cost is not None:
+                candidates.append((cost, p))
+
+        if candidates:
+            candidates.sort(key=lambda x: x[0])
+            chosen = candidates[0][1]
+            logger.info(
+                "cost_routing",
+                extra={
+                    "model": model,
+                    "chosen": chosen.get_provider_name(),
+                    "costs": {p.get_provider_name(): c for c, p in candidates},
+                },
+            )
+            return chosen
+
+        return providers[0]
+
     async def chat_completions(
         self, payload: dict, preferred_provider: str | None = None
     ) -> ProviderResponse:
@@ -298,12 +342,8 @@ class ProviderRouter:
         if not providers:
             return self._demo_response(payload)
 
-        if preferred_provider:
-            provider = self.get_provider(preferred_provider)
-            if provider and provider.is_configured():
-                return await provider.chat_completions(payload)
-
-        return await providers[0].chat_completions(payload)
+        provider = self.select_provider(payload, preferred_provider)
+        return await provider.chat_completions(payload)
 
     async def chat_completions_stream(
         self, payload: dict, preferred_provider: str | None = None
@@ -314,14 +354,7 @@ class ProviderRouter:
                 yield chunk
             return
 
-        if preferred_provider:
-            provider = self.get_provider(preferred_provider)
-            if provider and provider.is_configured():
-                async for chunk in provider.chat_completions_stream(payload):
-                    yield chunk
-                return
-
-        provider = providers[0]
+        provider = self.select_provider(payload, preferred_provider)
         async for chunk in provider.chat_completions_stream(payload):
             yield chunk
 
