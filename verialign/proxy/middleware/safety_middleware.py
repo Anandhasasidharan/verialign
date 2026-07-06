@@ -32,13 +32,14 @@ JAILBREAK_PATTERNS: list[re.Pattern] = [
 
 TOXIC_KEYWORDS: list[str] = [
     "hate",
-    "kill",
-    "die",
     "murder",
     "torture",
     "abuse",
-    "attack",
 ]
+
+_TOXIC_WORD_RE = re.compile(
+    "|".join(r"\b" + re.escape(kw) + r"\b" for kw in TOXIC_KEYWORDS), re.I
+)
 
 
 class SafetyMiddleware(BaseHTTPMiddleware):
@@ -56,40 +57,78 @@ class SafetyMiddleware(BaseHTTPMiddleware):
         self.toxicity_block = toxicity_block
         self.toxicity_score = toxicity_score
 
+def _luhn_valid(n: str) -> bool:
+    digits = [int(c) for c in n if c.isdigit()]
+    if len(digits) < 13 or len(digits) > 19:
+        return False
+    checksum = 0
+    double = False
+    for d in reversed(digits):
+        if double:
+            d *= 2
+            if d > 9:
+                d -= 9
+        checksum += d
+        double = not double
+    return checksum % 10 == 0
+
+
+def _redact_credit_cards(text: str) -> str:
+    raw = re.compile(r"\b(?:\d[ -]*?){13,19}\b")
+
+    def _repl(m: re.Match) -> str:
+        cleaned = re.sub(r"[ -]", "", m.group(0))
+        if _luhn_valid(cleaned):
+            return "[REDACTED_CREDIT_CARD]"
+        return m.group(0)
+
+    return raw.sub(_repl, text)
+
+
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        if self.jailbreak_block:
+        block = self.jailbreak_block or self.toxicity_block
+        if block:
             body = await request.body()
             if body:
-                text = body.decode("utf-8", errors="replace").lower()
-                for pattern in JAILBREAK_PATTERNS:
-                    if pattern.search(text):
-                        logger.warning(
-                            "jailbreak_detected", extra={"path": str(request.url)}
-                        )
-                        return JSONResponse(
-                            status_code=403,
-                            content={
-                                "error": {
-                                    "message": "Prompt blocked: jailbreak detected",
-                                    "type": "safety",
-                                    "status_code": 403,
-                                }
-                            },
-                        )
+                text = body.decode("utf-8", errors="replace")
+                if self.jailbreak_block:
+                    for pattern in JAILBREAK_PATTERNS:
+                        if pattern.search(text):
+                            logger.warning(
+                                "jailbreak_detected",
+                                extra={"path": str(request.url)},
+                            )
+                            return JSONResponse(
+                                status_code=403,
+                                content={
+                                    "error": {
+                                        "message": (
+                                            "Prompt blocked: jailbreak detected"
+                                        ),
+                                        "type": "safety",
+                                        "status_code": 403,
+                                    }
+                                },
+                            )
                 if self.toxicity_block:
-                    toxicity_hits = sum(kw in text for kw in TOXIC_KEYWORDS)
+                    toxicity_hits = len(_TOXIC_WORD_RE.findall(text))
                     if toxicity_hits > self.toxicity_score:
                         logger.warning(
                             "toxicity_detected",
-                            extra={"path": str(request.url), "hits": toxicity_hits},
+                            extra={
+                                "path": str(request.url),
+                                "hits": toxicity_hits,
+                            },
                         )
                         return JSONResponse(
                             status_code=403,
                             content={
                                 "error": {
-                                    "message": "Prompt blocked: toxic content detected",
+                                    "message": (
+                                        "Prompt blocked: toxic content detected"
+                                    ),
                                     "type": "safety",
                                     "status_code": 403,
                                 }
@@ -111,7 +150,12 @@ class SafetyMiddleware(BaseHTTPMiddleware):
                     text = body.decode("utf-8", errors="replace")
                     redacted = text
                     for name, pattern in PII_PATTERNS.items():
-                        redacted = pattern.sub(f"[REDACTED_{name.upper()}]", redacted)
+                        if name == "credit_card":
+                            redacted = _redact_credit_cards(redacted)
+                        else:
+                            redacted = pattern.sub(
+                                f"[REDACTED_{name.upper()}]", redacted
+                            )
                     if redacted != text:
                         logger.info("pii_redacted", extra={"path": str(request.url)})
                         return JSONResponse(
