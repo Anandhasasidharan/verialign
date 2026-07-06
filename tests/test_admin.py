@@ -20,6 +20,30 @@ def _headers() -> dict:
     return {"X-Admin-Key": "test-admin-key"}
 
 
+def test_admin_disabled_without_key(monkeypatch):
+    monkeypatch.delenv("VERIALIGN_ADMIN_API_KEY", raising=False)
+    get_settings.cache_clear()
+    client = TestClient(app)
+    response = client.get("/admin/pricing")
+    assert response.status_code == 503
+
+
+def test_admin_wrong_key_returns_403(monkeypatch):
+    monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "real-key")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    response = client.get("/admin/pricing", headers={"X-Admin-Key": "wrong-key"})
+    assert response.status_code == 403
+
+
+def test_admin_valid_key_succeeds(monkeypatch):
+    monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "real-key")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    response = client.get("/admin/pricing", headers={"X-Admin-Key": "real-key"})
+    assert response.status_code == 200
+
+
 def test_admin_config_put(monkeypatch):
     monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "test-admin-key")
     get_settings.cache_clear()

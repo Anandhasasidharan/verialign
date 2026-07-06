@@ -17,7 +17,12 @@ admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
 
 def verify_admin(api_key: str = Depends(admin_key_header)) -> None:
     settings = get_settings()
-    if settings.admin_api_key and api_key != settings.admin_api_key:
+    if not settings.admin_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin API is disabled: set VERIALIGN_ADMIN_API_KEY to enable it.",
+        )
+    if api_key != settings.admin_api_key:
         raise HTTPException(status_code=403, detail="Invalid admin key")
 
 
