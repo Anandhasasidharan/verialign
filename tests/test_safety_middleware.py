@@ -1,4 +1,3 @@
-import pytest
 from verialign.proxy.middleware.safety_middleware import (
     _luhn_valid,
     _redact_credit_cards,
