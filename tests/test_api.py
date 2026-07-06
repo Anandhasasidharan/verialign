@@ -196,24 +196,28 @@ def test_rate_limit_enforced(tmp_path, monkeypatch):
     get_settings.cache_clear()
     from verialign.proxy.middleware import rate_limiter as rl_mod
 
-    rl_mod.set_rate_limiter(
-        rl_mod.RateLimiter(rl_mod.RateLimitConfig(requests_per_minute=1))
-    )
+    saved = rl_mod.get_rate_limiter()
+    try:
+        rl_mod.set_rate_limiter(
+            rl_mod.RateLimiter(rl_mod.RateLimitConfig(requests_per_minute=1))
+        )
 
-    from verialign.proxy.main import app
+        from verialign.proxy.main import app
 
-    client = TestClient(app)
-    codes = [
-        client.post(
-            "/v1/chat/completions",
-            json={
-                "model": "demo",
-                "messages": [{"role": "user", "content": "hi"}],
-            },
-        ).status_code
-        for _ in range(5)
-    ]
-    assert 429 in codes
+        client = TestClient(app)
+        codes = [
+            client.post(
+                "/v1/chat/completions",
+                json={
+                    "model": "demo",
+                    "messages": [{"role": "user", "content": "hi"}],
+                },
+            ).status_code
+            for _ in range(5)
+        ]
+        assert 429 in codes
+    finally:
+        rl_mod.set_rate_limiter(saved)
 
 
 def test_chat_completion_works_with_valid_auth(tmp_path, monkeypatch):
