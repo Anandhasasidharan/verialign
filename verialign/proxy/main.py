@@ -168,10 +168,11 @@ app.add_middleware(
     RequestTimeoutMiddleware, timeout_seconds=settings_at_startup.proxy_timeout_seconds
 )
 app.add_middleware(MetricsMiddleware)
+origins = settings_at_startup.cors_allowed_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings_at_startup.cors_allowed_origins,
-    allow_credentials=True,
+    allow_origins=origins,
+    allow_credentials="*" not in origins if origins else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

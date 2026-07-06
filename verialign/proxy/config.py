@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     )
 
     cors_allowed_origins: list[str] = Field(
-        default_factory=lambda: ["*"], alias="VERIALIGN_CORS_ALLOWED_ORIGINS"
+        default_factory=list, alias="VERIALIGN_CORS_ALLOWED_ORIGINS"
     )
 
     proxy_timeout_seconds: float = Field(
