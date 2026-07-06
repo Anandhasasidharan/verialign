@@ -99,10 +99,7 @@ class RateLimiter:
             "tokens_limit": self.default_config.tokens_per_minute,
         }
 
-    def get_headers(
-        self, key: str, estimated_tokens: int = 1000, api_key: str | None = None
-    ) -> dict:
-        allowed, info = self.check_limit(key, estimated_tokens, api_key)
+    def build_headers(self, info: dict, allowed: bool) -> dict:
         headers = {
             "X-RateLimit-Limit-Requests": str(info["requests_limit"]),
             "X-RateLimit-Remaining-Requests": str(info["requests_remaining"]),
@@ -114,6 +111,12 @@ class RateLimiter:
             retry_after = str(max(1, int(60 / self.default_config.requests_per_minute)))
             headers["Retry-After"] = retry_after
         return headers
+
+    def get_headers(
+        self, key: str, estimated_tokens: int = 1000, api_key: str | None = None
+    ) -> dict:
+        allowed, info = self.check_limit(key, estimated_tokens, api_key)
+        return self.build_headers(info, allowed)
 
 
 _global_limiter: RateLimiter | None = None

@@ -370,7 +370,21 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         if auth_header.startswith("Bearer ")
         else None
     )
-    rate_limiter.check_limit(client_ip, api_key=api_key)
+    allowed, rate_info = rate_limiter.check_limit(client_ip, api_key=api_key)
+    rate_limit_headers = rate_limiter.build_headers(rate_info, allowed)
+
+    if not allowed:
+        return JSONResponse(
+            status_code=429,
+            content={
+                "error": {
+                    "message": "Rate limit exceeded",
+                    "type": "rate_limit_error",
+                    "status_code": 429,
+                }
+            },
+            headers=rate_limit_headers,
+        )
 
     if validated.stream:
         return await _handle_streaming(
@@ -423,9 +437,7 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
     store = _get_store()
     await _write_trace(store, payload, augmented.data, augmented.verification)
 
-    response_headers = {}
-    rate_limit_headers = rate_limiter.get_headers(client_ip)
-    response_headers.update(rate_limit_headers)
+    response_headers = dict(rate_limit_headers)
     response_headers["X-Provider"] = provider_name
 
     logger.info(

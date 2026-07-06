@@ -187,6 +187,35 @@ def test_verify_endpoint_works_without_context(tmp_path, monkeypatch):
     assert "verification" in body
 
 
+def test_rate_limit_enforced(tmp_path, monkeypatch):
+    monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
+    monkeypatch.delenv("VERIALIGN_PROXY_API_KEY", raising=False)
+    monkeypatch.delenv("VERIALIGN_REQUIRE_PROXY_AUTH", raising=False)
+    monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
+    monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
+    get_settings.cache_clear()
+    from verialign.proxy.middleware import rate_limiter as rl_mod
+
+    rl_mod.set_rate_limiter(
+        rl_mod.RateLimiter(rl_mod.RateLimitConfig(requests_per_minute=1))
+    )
+
+    from verialign.proxy.main import app
+
+    client = TestClient(app)
+    codes = [
+        client.post(
+            "/v1/chat/completions",
+            json={
+                "model": "demo",
+                "messages": [{"role": "user", "content": "hi"}],
+            },
+        ).status_code
+        for _ in range(5)
+    ]
+    assert 429 in codes
+
+
 def test_chat_completion_works_with_valid_auth(tmp_path, monkeypatch):
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.setenv("VERIALIGN_PROXY_API_KEY", "test-secret-key")
