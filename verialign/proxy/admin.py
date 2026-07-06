@@ -6,7 +6,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-
 from verialign.proxy.config import get_settings
 from verialign.proxy.routing.cost_model import list_model_prices, update_model_pricing
 
@@ -26,29 +25,10 @@ def verify_admin(api_key: str = Depends(admin_key_header)) -> None:
         raise HTTPException(status_code=403, detail="Invalid admin key")
 
 
-class ConfigUpdate(BaseModel):
-    rate_limit_rpm: int | None = None
-    rate_limit_tpm: int | None = None
-    redact_traces: bool | None = None
-    require_proxy_auth: bool | None = None
-
-
 class PricingUpdate(BaseModel):
     model: str
     input_price: float
     output_price: float
-
-
-_runtime_config: dict = {}
-
-
-@router.put("/config", dependencies=[Depends(verify_admin)])
-async def update_config(update: ConfigUpdate) -> dict:
-    _runtime_config.update(update.model_dump(exclude_none=True))
-    logger.info(
-        "admin_config_updated", extra={"changes": update.model_dump(exclude_none=True)}
-    )
-    return {"status": "ok", "overrides": dict(_runtime_config)}
 
 
 @router.put("/pricing", dependencies=[Depends(verify_admin)])
@@ -60,18 +40,6 @@ async def update_pricing(update: PricingUpdate) -> dict:
         "model": update.model,
         "pricing": {"input": update.input_price, "output": update.output_price},
     }
-
-
-@router.get("/config", dependencies=[Depends(verify_admin)])
-async def get_config() -> dict:
-    settings = get_settings()
-    s = settings.model_dump()
-    for key in ("upstream_api_key", "proxy_api_key", "admin_api_key"):
-        if s.get(key):
-            s[key] = "***"
-    if _runtime_config:
-        s["runtime_overrides"] = dict(_runtime_config)
-    return s
 
 
 @router.get("/health", dependencies=[Depends(verify_admin)])

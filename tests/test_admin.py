@@ -2,7 +2,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from verialign.proxy.config import get_settings
-from verialign.proxy.admin import _runtime_config
 from verialign.proxy.routing.cost_model import MODEL_PRICING
 from verialign.proxy.main import app
 
@@ -10,10 +9,8 @@ from verialign.proxy.main import app
 @pytest.fixture(autouse=True)
 def clear_state():
     get_settings.cache_clear()
-    _runtime_config.clear()
     yield
     get_settings.cache_clear()
-    _runtime_config.clear()
 
 
 def _headers() -> dict:
@@ -42,27 +39,6 @@ def test_admin_valid_key_succeeds(monkeypatch):
     client = TestClient(app)
     response = client.get("/admin/pricing", headers={"X-Admin-Key": "real-key"})
     assert response.status_code == 200
-
-
-def test_admin_config_put(monkeypatch):
-    monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "test-admin-key")
-    get_settings.cache_clear()
-    client = TestClient(app)
-    response = client.put(
-        "/admin/config", json={"rate_limit_rpm": 200}, headers=_headers()
-    )
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "ok"
-    assert body["overrides"]["rate_limit_rpm"] == 200
-
-
-def test_admin_config_put_requires_auth(monkeypatch):
-    monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "test-admin-key")
-    get_settings.cache_clear()
-    client = TestClient(app)
-    response = client.put("/admin/config", json={"rate_limit_rpm": 200})
-    assert response.status_code == 403
 
 
 def test_admin_pricing_put(monkeypatch):

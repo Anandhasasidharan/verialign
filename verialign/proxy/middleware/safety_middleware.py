@@ -42,21 +42,6 @@ _TOXIC_WORD_RE = re.compile(
 )
 
 
-class SafetyMiddleware(BaseHTTPMiddleware):
-    def __init__(
-        self,
-        app,
-        pii_redact: bool = True,
-        jailbreak_block: bool = True,
-        toxicity_block: bool = True,
-        toxicity_score: float = 0.0,
-    ) -> None:
-        super().__init__(app)
-        self.pii_redact = pii_redact
-        self.jailbreak_block = jailbreak_block
-        self.toxicity_block = toxicity_block
-        self.toxicity_score = toxicity_score
-
 def _luhn_valid(n: str) -> bool:
     digits = [int(c) for c in n if c.isdigit()]
     if len(digits) < 13 or len(digits) > 19:
@@ -84,6 +69,21 @@ def _redact_credit_cards(text: str) -> str:
 
     return raw.sub(_repl, text)
 
+
+class SafetyMiddleware(BaseHTTPMiddleware):
+    def __init__(
+        self,
+        app,
+        pii_redact: bool = True,
+        jailbreak_block: bool = True,
+        toxicity_block: bool = True,
+        toxicity_score: float = 0.0,
+    ) -> None:
+        super().__init__(app)
+        self.pii_redact = pii_redact
+        self.jailbreak_block = jailbreak_block
+        self.toxicity_block = toxicity_block
+        self.toxicity_score = toxicity_score
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
