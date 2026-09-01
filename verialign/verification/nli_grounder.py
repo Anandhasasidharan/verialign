@@ -75,7 +75,7 @@ class NLIGrounder:
                         "contradiction": round(prob[2].item(), 4),
                     },
                 )
-            return results  # noqa: TRY300
+            return results
         except Exception:
             logger.exception("nli_scoring_failed")
             return []

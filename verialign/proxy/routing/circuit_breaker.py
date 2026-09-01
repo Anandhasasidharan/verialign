@@ -77,7 +77,7 @@ class CircuitBreaker:
                     "circuit_half_open_success",
                     extra={"provider": self.provider.get_provider_name()},
                 )
-            return response  # noqa: TRY300
+            return response
         except ProviderError:
             if current == CircuitState.HALF_OPEN:
                 self._state = CircuitState.OPEN

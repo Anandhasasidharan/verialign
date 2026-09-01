@@ -147,9 +147,7 @@ class ChecklistGenerator:
     ) -> list[ModelChecklistItem]:
         items: list[ModelChecklistItem] = []
 
-        for _i, (claim, result) in enumerate(
-            zip(claims, verification_results, strict=False)
-        ):
+        for _i, (claim, result) in enumerate(zip(claims, verification_results, strict=False)):
             status = result.get("status", "unclear")
             confidence = result.get("confidence", 0.0)
 
@@ -190,9 +188,7 @@ class ChecklistGenerator:
         for category, keywords in self.ACTION_KEYWORDS.items():
             matches = [kw for kw in keywords if kw in text_lower]
             if matches:
-                priority = (
-                    "high" if category in ("security", "deployment") else "medium"
-                )
+                priority = "high" if category in ("security", "deployment") else "medium"
                 items.append(
                     ModelChecklistItem(
                         description=f"Review {category} implications (mentions: {', '.join(matches[:3])})",
@@ -223,9 +219,7 @@ class ChecklistGenerator:
                     ModelChecklistItem(
                         description=f"Multiple {category} claims detected ({count}) - verify consistency",
                         category="consistency",
-                        priority="medium"
-                        if category in ("causal", "conditional")
-                        else "low",
+                        priority="medium" if category in ("causal", "conditional") else "low",
                         related_claims=[],
                     ),
                 )

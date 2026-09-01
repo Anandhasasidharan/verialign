@@ -375,9 +375,7 @@ async def _handle_streaming(
 
 
 @app.post("/v1/chat/completions")
-async def chat_completions(
-    request: Request, _: Annotated[None, Depends(verify_proxy_auth)]
-):
+async def chat_completions(request: Request, _: Annotated[None, Depends(verify_proxy_auth)]):
     settings = get_settings()
 
     payload = await request.json()
@@ -402,11 +400,7 @@ async def chat_completions(
     rate_limiter = get_rate_limiter()
     client_ip = request.client.host if request.client else "unknown"
     auth_header = request.headers.get("authorization", "")
-    api_key = (
-        auth_header.replace("Bearer ", "")
-        if auth_header.startswith("Bearer ")
-        else None
-    )
+    api_key = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else None
     allowed, rate_info = rate_limiter.check_limit(client_ip, api_key=api_key)
     rate_limit_headers = rate_limiter.build_headers(rate_info, allowed)
 
@@ -454,9 +448,7 @@ async def chat_completions(
     )
     try:
         threshold = (
-            float(header_threshold)
-            if header_threshold is not None
-            else settings.block_threshold
+            float(header_threshold) if header_threshold is not None else settings.block_threshold
         )
     except ValueError:
         threshold = settings.block_threshold
@@ -480,9 +472,7 @@ async def chat_completions(
         send_alert(
             settings.alert_webhook_url,
             settings.alert_slack_webhook_url,
-            upstream_response.get("choices", [{}])[0]
-            .get("message", {})
-            .get("content", ""),
+            upstream_response.get("choices", [{}])[0].get("message", {}).get("content", ""),
             augmented.verification,
         ),
     )

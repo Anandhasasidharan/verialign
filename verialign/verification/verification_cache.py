@@ -67,9 +67,7 @@ class VerificationCache:
             best_key: str | None = None
             best_sim = 0.0
             for key, (_, stored_emb) in self._embeddings.items():
-                sim = sum(
-                    a * b for a, b in zip(emb.tolist(), stored_emb, strict=False)
-                ) / (
+                sim = sum(a * b for a, b in zip(emb.tolist(), stored_emb, strict=False)) / (
                     math.sqrt(sum(a * a for a in emb.tolist()))
                     * math.sqrt(sum(b * b for b in stored_emb))
                     or 1

@@ -113,7 +113,7 @@ class TFIDFMatcher:
                     similarities.append(0.0)
                 else:
                     similarities.append(float(dot / (norm_claim * norm_context)))
-            return similarities  # noqa: TRY300
+            return similarities
         except Exception:  # noqa: BLE001
             return [0.0] * len(context_texts)
 
@@ -291,11 +291,7 @@ class SourceGrounder:
         best = 0.0
         for i, (_, text) in enumerate(context):
             source_terms = self._terms(text)
-            kw = (
-                len(claim_terms & source_terms) / len(claim_terms)
-                if claim_terms
-                else 0.0
-            )
+            kw = len(claim_terms & source_terms) / len(claim_terms) if claim_terms else 0.0
             sem = sem_scores[i] if i < len(sem_scores) else 0.0
             combined = kw * 0.4 + sem * 0.6 if sem > 0 else kw
             best = max(best, combined)
@@ -303,7 +299,5 @@ class SourceGrounder:
 
     def _terms(self, text: str) -> set[str]:
         return {
-            word
-            for word in _WORD.findall(text.lower())
-            if word not in STOPWORDS and len(word) > 2
+            word for word in _WORD.findall(text.lower()) if word not in STOPWORDS and len(word) > 2
         }

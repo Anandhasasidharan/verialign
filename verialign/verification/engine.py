@@ -123,8 +123,7 @@ class VerificationEngine:
             )
 
         contradictions = [
-            Contradiction(**c.to_dict())
-            for c in self.contradiction_detector.detect(claim_texts)
+            Contradiction(**c.to_dict()) for c in self.contradiction_detector.detect(claim_texts)
         ]
         checklist = [
             ChecklistItem(**item.to_dict())

@@ -47,7 +47,7 @@ def load_traces(limit: int = 100):
                 and "verification_blocked" in str(row["response_json"])
                 else 0
             )
-            return summary  # noqa: TRY300
+            return summary
         except Exception:  # noqa: BLE001
             return {}
 
@@ -137,9 +137,7 @@ def render_overview(df) -> None:
         st.subheader("Claims by Status")
         status_cols = ["supported", "unsupported", "unclear", "partially_supported"]
         status_data = {
-            col: int(df.get(col, pd.Series([0])).sum())
-            for col in status_cols
-            if col in df.columns
+            col: int(df.get(col, pd.Series([0])).sum()) for col in status_cols if col in df.columns
         }
         if status_data:
             st.bar_chart(status_data)
@@ -269,7 +267,7 @@ def render_per_task(df) -> None:
             for task, kws in keywords.items():
                 if any(kw in user_content for kw in kws):
                     return task
-            return "general"  # noqa: TRY300
+            return "general"
         except Exception:  # noqa: BLE001
             return "unknown"
 
@@ -282,12 +280,8 @@ def render_per_task(df) -> None:
             total_claims=("total_claims", "sum")
             if "total_claims" in df.columns
             else ("id", "count"),
-            supported=("supported", "sum")
-            if "supported" in df.columns
-            else ("id", "count"),
-            unsupported=("unsupported", "sum")
-            if "unsupported" in df.columns
-            else ("id", "count"),
+            supported=("supported", "sum") if "supported" in df.columns else ("id", "count"),
+            unsupported=("unsupported", "sum") if "unsupported" in df.columns else ("id", "count"),
             unclear=("unclear", "sum") if "unclear" in df.columns else ("id", "count"),
         )
         .reset_index()
@@ -312,9 +306,7 @@ def render_drift(df) -> None:
             total_claims=("total_claims", "sum")
             if "total_claims" in df.columns
             else ("id", "count"),
-            supported=("supported", "sum")
-            if "supported" in df.columns
-            else ("id", "count"),
+            supported=("supported", "sum") if "supported" in df.columns else ("id", "count"),
         )
         .reset_index()
     )
@@ -451,11 +443,7 @@ def render_trace_detail(df) -> None:
             st.error(
                 f"Blocked by policy (422) — trust {resp.get('verification', {}).get('trust_score', '—')}",
             )
-        elif (
-            "data" in resp
-            and isinstance(resp["data"], dict)
-            and "claims" in resp["data"]
-        ):
+        elif "data" in resp and isinstance(resp["data"], dict) and "claims" in resp["data"]:
             st.info("Structured output: verification nested under `data`")
 
     st.divider()

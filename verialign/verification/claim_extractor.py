@@ -65,9 +65,7 @@ class ClaimExtractor:
             if hasattr(result, "__await__"):
                 result = await result
             response = result if isinstance(result, dict) else {}
-            content = (
-                response.get("choices", [{}])[0].get("message", {}).get("content", "")
-            )
+            content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
 
             content = content.strip()
             if content.startswith("```"):

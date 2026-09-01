@@ -46,7 +46,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             status = str(response.status_code)
-            return response  # noqa: TRY300
+            return response
         except Exception:
             status = "500"
             raise

@@ -120,11 +120,7 @@ class ResponseHandler:
         # Only apply policy when trust_score is available
         should_evaluate = trust_score is not None
 
-        if (
-            self.policy == "block"
-            and should_evaluate
-            and trust_score < self.block_threshold
-        ):
+        if self.policy == "block" and should_evaluate and trust_score < self.block_threshold:
             blocked = {
                 "error": {
                     "message": f"Response blocked by verification policy: trust_score {trust_score:.3f} below threshold {self.block_threshold:.3f}",
@@ -143,11 +139,7 @@ class ResponseHandler:
                 headers={"X-VeriAlign-Blocked": "true"},
             )
 
-        if (
-            self.policy == "warn"
-            and should_evaluate
-            and trust_score < self.block_threshold
-        ):
+        if self.policy == "warn" and should_evaluate and trust_score < self.block_threshold:
             # Inject visible caveat into content and set warning header
             caveat = f"[VeriAlign warning: trust_score {trust_score:.3f} below threshold {self.block_threshold:.3f} — verification recommended] "
             choices = response.get("choices")
@@ -157,9 +149,7 @@ class ResponseHandler:
                     response["choices"] = [dict(c) for c in choices]
                     response["choices"][0] = dict(choices[0])
                     response["choices"][0]["message"] = dict(msg)
-                    response["choices"][0]["message"]["content"] = (
-                        caveat + msg["content"]
-                    )
+                    response["choices"][0]["message"]["content"] = caveat + msg["content"]
             return AugmentedResponse(
                 data=response,
                 verification=verification,

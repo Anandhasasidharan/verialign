@@ -42,8 +42,7 @@ class ConfidenceScorer:
         overlap_confidence = source_overlap
 
         combined = (
-            self.logprob_weight * logprob_confidence
-            + self.overlap_weight * overlap_confidence
+            self.logprob_weight * logprob_confidence + self.overlap_weight * overlap_confidence
         )
 
         return ConfidenceScore(

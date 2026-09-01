@@ -23,9 +23,7 @@ PII_PATTERNS: dict[str, re.Pattern] = {
 }
 
 JAILBREAK_PATTERNS: list[re.Pattern] = [
-    re.compile(
-        r"ignore\s+(all\s+)?(prior|previous|above)\s+instructions", re.IGNORECASE
-    ),
+    re.compile(r"ignore\s+(all\s+)?(prior|previous|above)\s+instructions", re.IGNORECASE),
     re.compile(r"you\s+are\s+(now|free|not\s+bound)", re.IGNORECASE),
     re.compile(r"system\s+prompt", re.IGNORECASE),
     re.compile(r"act\s+as\s+(dan|jailbroken|unfiltered)", re.IGNORECASE),
@@ -114,9 +112,7 @@ class SafetyMiddleware(BaseHTTPMiddleware):
                                 status_code=403,
                                 content={
                                     "error": {
-                                        "message": (
-                                            "Prompt blocked: jailbreak detected"
-                                        ),
+                                        "message": ("Prompt blocked: jailbreak detected"),
                                         "type": "safety",
                                         "status_code": 403,
                                     },
@@ -136,9 +132,7 @@ class SafetyMiddleware(BaseHTTPMiddleware):
                             status_code=403,
                             content={
                                 "error": {
-                                    "message": (
-                                        "Prompt blocked: toxic content detected"
-                                    ),
+                                    "message": ("Prompt blocked: toxic content detected"),
                                     "type": "safety",
                                     "status_code": 403,
                                 },

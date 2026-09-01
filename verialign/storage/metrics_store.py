@@ -16,9 +16,7 @@ class MetricsStore:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
         total_requests = (
-            self.session.query(func.count(Trace.id))
-            .filter(Trace.created_at >= cutoff)
-            .scalar()
+            self.session.query(func.count(Trace.id)).filter(Trace.created_at >= cutoff).scalar()
             or 0
         )
 
@@ -80,10 +78,7 @@ class MetricsStore:
 
         results = []
         for model in (
-            self.session.query(Trace.model)
-            .filter(Trace.created_at >= cutoff)
-            .distinct()
-            .all()
+            self.session.query(Trace.model).filter(Trace.created_at >= cutoff).distinct().all()
         ):
             model_name = model[0]
             model_traces = (
@@ -96,9 +91,7 @@ class MetricsStore:
             if not trace_ids:
                 continue
 
-            claims = (
-                self.session.query(Claim).filter(Claim.trace_id.in_(trace_ids)).all()
-            )
+            claims = self.session.query(Claim).filter(Claim.trace_id.in_(trace_ids)).all()
             contradictions = (
                 self.session.query(Contradiction)
                 .filter(Contradiction.trace_id.in_(trace_ids))
@@ -148,9 +141,7 @@ class MetricsStore:
             claims = self.session.query(Claim).filter(Claim.trace_id == trace.id).all()
             for claim in claims:
                 task_stats[task]["claims"] += 1
-                task_stats[task][claim.status] = (
-                    task_stats[task].get(claim.status, 0) + 1
-                )
+                task_stats[task][claim.status] = task_stats[task].get(claim.status, 0) + 1
 
         results = []
         for task, stats in task_stats.items():
@@ -191,11 +182,7 @@ class MetricsStore:
         results = []
         for day in sorted(daily_stats.keys()):
             stats = daily_stats[day]
-            avg_conf = (
-                stats["avg_confidence"] / stats["claims"]
-                if stats["claims"] > 0
-                else 0.0
-            )
+            avg_conf = stats["avg_confidence"] / stats["claims"] if stats["claims"] > 0 else 0.0
             results.append(
                 {
                     "date": day,

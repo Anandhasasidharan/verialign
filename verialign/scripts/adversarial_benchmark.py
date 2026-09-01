@@ -191,9 +191,7 @@ async def run_benchmark(engine: VerificationEngine | None = None) -> Adversarial
     total = len(BENCHMARK_CASES)
     hallucination_cases = sum(1 for c in BENCHMARK_CASES if c.expected_unsupported)
     accuracy = (
-        (flagged + (total - hallucination_cases - false_positives)) / total
-        if total > 0
-        else 0
+        (flagged + (total - hallucination_cases - false_positives)) / total if total > 0 else 0
     )
 
     return AdversarialResult(

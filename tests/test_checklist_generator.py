@@ -54,9 +54,7 @@ class TestChecklistGenerator:
         ]
         items = self.generator.generate("", claims, [])
         causal_items = [
-            i
-            for i in items
-            if i.category == "consistency" and "causal" in i.description.lower()
+            i for i in items if i.category == "consistency" and "causal" in i.description.lower()
         ]
         assert len(causal_items) >= 1
 

@@ -157,9 +157,7 @@ def generate_verification_data(prompt: str, response: str, context: list) -> dic
             "supported": sum(1 for c in claims if c["status"] == "supported"),
             "unsupported": sum(1 for c in claims if c["status"] == "unsupported"),
             "unclear": sum(1 for c in claims if c["status"] == "unclear"),
-            "partially_supported": sum(
-                1 for c in claims if c["status"] == "partially_supported"
-            ),
+            "partially_supported": sum(1 for c in claims if c["status"] == "partially_supported"),
             "contradictions_found": len(contradictions),
             "checklist_items": len(checklist),
         },

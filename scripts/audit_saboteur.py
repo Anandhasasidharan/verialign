@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Gram-style pre-deployment audit: inject overt saboteur claims with fake sources.
 If SourceGrounder is saboteured to return supported with invented excerpt, audit fails.

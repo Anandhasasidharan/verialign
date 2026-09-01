@@ -26,16 +26,9 @@ class ToolGrounder:
         normalized: list[dict] = []
         for item in raw:
             if isinstance(item, dict):
-                name = (
-                    item.get("name") or item.get("tool") or item.get("function") or ""
-                )
+                name = item.get("name") or item.get("tool") or item.get("function") or ""
                 args = item.get("arguments") or item.get("args") or {}
-                result = (
-                    item.get("result")
-                    or item.get("output")
-                    or item.get("content")
-                    or ""
-                )
+                result = item.get("result") or item.get("output") or item.get("content") or ""
                 # also handle OpenAI tool_calls shape: {"function":{"name":..., "arguments":...}}
                 if not name and isinstance(item.get("function"), dict):
                     name = item["function"].get("name", "")
@@ -106,9 +99,7 @@ class ToolGrounder:
             # Textual contradiction: result says failed but claim says processed, etc.
             result_lower = result_str.lower()
             claim_lower = claim.lower()
-            if "processed" in claim_lower and (
-                "failed" in result_lower or "error" in result_lower
-            ):
+            if "processed" in claim_lower and ("failed" in result_lower or "error" in result_lower):
                 return (
                     "unsupported",
                     0.8,

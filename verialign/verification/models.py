@@ -84,9 +84,7 @@ class VerificationResult:
         d: dict = {
             "total_claims": len(self.claims),
             "supported": sum(1 for claim in self.claims if claim.status == "supported"),
-            "unsupported": sum(
-                1 for claim in self.claims if claim.status == "unsupported"
-            ),
+            "unsupported": sum(1 for claim in self.claims if claim.status == "unsupported"),
             "unclear": sum(1 for claim in self.claims if claim.status == "unclear"),
             "partially_supported": sum(
                 1 for claim in self.claims if claim.status == "partially_supported"

@@ -124,11 +124,7 @@ async def run_benchmark() -> BenchmarkResult:
         if (true_positives + false_negatives) > 0
         else 0.0
     )
-    f1 = (
-        2 * (precision * recall) / (precision + recall)
-        if (precision + recall) > 0
-        else 0.0
-    )
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
 
     return BenchmarkResult(
         total_cases=len(BENCHMARK_CASES),

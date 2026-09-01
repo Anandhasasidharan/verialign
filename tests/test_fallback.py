@@ -12,9 +12,7 @@ from verialign.proxy.routing.provider_router import (
 
 
 class MockProvider(BaseProvider):
-    def __init__(
-        self, name: str, should_fail: bool = False, fail_status: int = 500
-    ) -> None:
+    def __init__(self, name: str, should_fail: bool = False, fail_status: int = 500) -> None:
         self.name = name
         self.should_fail = should_fail
         self.fail_status = fail_status

@@ -38,9 +38,7 @@ class TestTrustScorer:
         result_b = VerificationResult(
             claims=claims,
             contradictions=[
-                Contradiction(
-                    claim_a="a", claim_b="b", type="negation", confidence=0.8
-                ),
+                Contradiction(claim_a="a", claim_b="b", type="negation", confidence=0.8),
             ],
             checklist=[],
         )

@@ -85,9 +85,7 @@ def test_chat_completion_streaming_returns_events(tmp_path, monkeypatch) -> None
     assert "chatcmpl-demo-" in body
 
 
-def test_chat_completion_uses_demo_mode_without_provider_env(
-    tmp_path, monkeypatch
-) -> None:
+def test_chat_completion_uses_demo_mode_without_provider_env(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)

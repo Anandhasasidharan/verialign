@@ -67,7 +67,7 @@ class ValkeyCache(VerificationCache):
                     },
                 )
                 self._client.setex(key, self._ttl, data)
-                return  # noqa: TRY300
+                return
             except Exception:  # noqa: BLE001, S110
                 pass
         super().set(text, context, result)

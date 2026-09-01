@@ -153,9 +153,7 @@ async def run_benchmark() -> BenchmarkResult:
     calibration = []
     ece = 0.0
     for lo, hi in buckets:
-        bucket_points = [
-            p for p in calib_points if lo <= p[0] < hi or (hi == 1.0 and p[0] == 1.0)
-        ]
+        bucket_points = [p for p in calib_points if lo <= p[0] < hi or (hi == 1.0 and p[0] == 1.0)]
         count = len(bucket_points)
         if count == 0:
             calibration.append(
@@ -171,9 +169,7 @@ async def run_benchmark() -> BenchmarkResult:
         avg_conf_bucket = sum(p[0] for p in bucket_points) / count
         acc_bucket = sum(1 for p in bucket_points if p[1]) / count
         ece_contrib = (
-            abs(avg_conf_bucket - acc_bucket) * (count / len(calib_points))
-            if calib_points
-            else 0
+            abs(avg_conf_bucket - acc_bucket) * (count / len(calib_points)) if calib_points else 0
         )
         ece += ece_contrib
         calibration.append(
