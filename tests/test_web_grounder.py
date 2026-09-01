@@ -1,24 +1,25 @@
 import pytest
+
 from verialign.verification.web_grounder import WebGrounder
 
 
 class TestWebGrounder:
-    def test_not_available_without_key(self):
+    def test_not_available_without_key(self) -> None:
         g = WebGrounder(api_key=None)
         assert g.is_available() is False
 
-    def test_available_with_key(self):
+    def test_available_with_key(self) -> None:
         g = WebGrounder(api_key="test-key")
         assert g.is_available() is True
 
     @pytest.mark.asyncio
-    async def test_returns_empty_without_key(self):
+    async def test_returns_empty_without_key(self) -> None:
         g = WebGrounder(api_key=None)
         results = await g.ground("test claim")
         assert results == []
 
     @pytest.mark.asyncio
-    async def test_caches_results(self):
+    async def test_caches_results(self) -> None:
         g = WebGrounder(api_key="test-key")
         assert "fake_claim_hash" not in g._cache
         g._cache["fake_claim_hash"] = (0.0, [])
@@ -26,7 +27,7 @@ class TestWebGrounder:
         results = await g.ground("fake claim")
         assert results == []
 
-    def test_unknown_provider_logs_warning(self, caplog):
+    def test_unknown_provider_logs_warning(self, caplog) -> None:
         import logging
 
         g = WebGrounder(api_key="key", provider="unknown")
@@ -38,7 +39,7 @@ class TestWebGrounder:
 
     @pytest.mark.skip(reason="Requires live API key")
     @pytest.mark.asyncio
-    async def test_integration_with_real_api(self):
+    async def test_integration_with_real_api(self) -> None:
         import os
 
         key = os.environ.get("VERIALIGN_WEB_SEARCH_API_KEY")

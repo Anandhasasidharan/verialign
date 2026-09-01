@@ -1,10 +1,11 @@
-from datetime import datetime, timezone, timedelta
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Any
-from sqlalchemy import func, and_
+
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
-from verialign.storage.models import Trace, Claim, Contradiction
+from verialign.storage.models import Claim, Contradiction, Trace
 
 
 class MetricsStore:
@@ -120,7 +121,7 @@ class MetricsStore:
                     "claims_by_status": dict(status_counts),
                     "contradictions": len(contradictions),
                     "average_confidence": round(avg_conf, 3),
-                }
+                },
             )
 
         return results
@@ -137,7 +138,7 @@ class MetricsStore:
                 "supported": 0,
                 "unsupported": 0,
                 "unclear": 0,
-            }
+            },
         )
 
         for trace in traces:
@@ -162,7 +163,7 @@ class MetricsStore:
                     "unsupported": stats.get("unsupported", 0),
                     "unclear": stats.get("unclear", 0),
                     "partially_supported": stats.get("partially_supported", 0),
-                }
+                },
             )
 
         return results
@@ -171,7 +172,7 @@ class MetricsStore:
         cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
         daily_stats = defaultdict(
-            lambda: {"requests": 0, "claims": 0, "supported": 0, "avg_confidence": 0.0}
+            lambda: {"requests": 0, "claims": 0, "supported": 0, "avg_confidence": 0.0},
         )
 
         traces = self.session.query(Trace).filter(Trace.created_at >= cutoff).all()
@@ -202,7 +203,7 @@ class MetricsStore:
                     "total_claims": stats["claims"],
                     "supported_claims": stats["supported"],
                     "average_confidence": round(avg_conf, 3),
-                }
+                },
             )
 
         return results
@@ -229,7 +230,7 @@ class MetricsStore:
                     "claim_b": c.claim_b,
                     "type": c.type,
                     "confidence": c.confidence,
-                }
+                },
             )
 
         return results

@@ -127,7 +127,10 @@ class ChecklistGenerator:
     }
 
     def generate(
-        self, response_text: str, claims: list[str], verification_results: list[dict]
+        self,
+        response_text: str,
+        claims: list[str],
+        verification_results: list[dict],
     ) -> list[ModelChecklistItem]:
         items: list[ModelChecklistItem] = []
 
@@ -138,11 +141,15 @@ class ChecklistGenerator:
         return items
 
     def _generate_verification_items(
-        self, claims: list[str], verification_results: list[dict]
+        self,
+        claims: list[str],
+        verification_results: list[dict],
     ) -> list[ModelChecklistItem]:
         items: list[ModelChecklistItem] = []
 
-        for i, (claim, result) in enumerate(zip(claims, verification_results)):
+        for _i, (claim, result) in enumerate(
+            zip(claims, verification_results, strict=False)
+        ):
             status = result.get("status", "unclear")
             confidence = result.get("confidence", 0.0)
 
@@ -153,7 +160,7 @@ class ChecklistGenerator:
                         category="verification",
                         priority="high",
                         related_claims=[claim],
-                    )
+                    ),
                 )
             elif status == "unclear" and confidence < 0.5:
                 items.append(
@@ -162,7 +169,7 @@ class ChecklistGenerator:
                         category="verification",
                         priority="medium",
                         related_claims=[claim],
-                    )
+                    ),
                 )
             elif status == "supported" and confidence < 0.7:
                 items.append(
@@ -171,7 +178,7 @@ class ChecklistGenerator:
                         category="verification",
                         priority="low",
                         related_claims=[claim],
-                    )
+                    ),
                 )
 
         return items
@@ -192,13 +199,14 @@ class ChecklistGenerator:
                         category=category,
                         priority=priority,
                         related_claims=[],
-                    )
+                    ),
                 )
 
         return items
 
     def _generate_claim_category_items(
-        self, claims: list[str]
+        self,
+        claims: list[str],
     ) -> list[ModelChecklistItem]:
         items: list[ModelChecklistItem] = []
         categories_found: dict[str, int] = {}
@@ -219,7 +227,7 @@ class ChecklistGenerator:
                         if category in ("causal", "conditional")
                         else "low",
                         related_claims=[],
-                    )
+                    ),
                 )
 
         return items

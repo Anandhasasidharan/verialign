@@ -1,105 +1,106 @@
 import pytest
+
+from verialign.proxy.config import Settings
 from verialign.proxy.routing.cost_model import (
+    _find_pricing,
     calculate_cost,
     estimate_cost,
     list_model_prices,
-    _find_pricing,
 )
 from verialign.proxy.routing.provider_router import ProviderRouter
-from verialign.proxy.config import Settings
 
 
 class TestCostModel:
-    def test_calculate_cost_known_model(self):
+    def test_calculate_cost_known_model(self) -> None:
         cost = calculate_cost("gpt-4o", 1000, 500)
         assert cost is not None
         assert cost > 0
         assert cost < 1
 
-    def test_calculate_cost_unknown_model(self):
+    def test_calculate_cost_unknown_model(self) -> None:
         cost = calculate_cost("nonexistent-model", 1000, 500)
         assert cost is None
 
-    def test_calculate_cost_exact_values(self):
+    def test_calculate_cost_exact_values(self) -> None:
         cost = calculate_cost("gpt-4o", 1_000_000, 0)
         assert cost == pytest.approx(2.50, rel=1e-3)
 
-    def test_calculate_cost_output_only(self):
+    def test_calculate_cost_output_only(self) -> None:
         cost = calculate_cost("gpt-4o", 0, 1_000_000)
         assert cost == pytest.approx(10.00, rel=1e-3)
 
-    def test_calculate_cost_zero_tokens(self):
+    def test_calculate_cost_zero_tokens(self) -> None:
         cost = calculate_cost("gpt-4o", 0, 0)
         assert cost == pytest.approx(0.0, rel=1e-3)
 
-    def test_estimate_cost(self):
+    def test_estimate_cost(self) -> None:
         cost = estimate_cost("gpt-4o-mini", 1000)
         assert cost is not None
         assert cost > 0
 
-    def test_estimate_cost_unknown_model(self):
+    def test_estimate_cost_unknown_model(self) -> None:
         cost = estimate_cost("unknown-model", 1000)
         assert cost is None
 
-    def test_list_model_prices(self):
+    def test_list_model_prices(self) -> None:
         prices = list_model_prices()
         assert "gpt-4o" in prices
         assert len(prices) > 5
 
-    def test_find_pricing_exact(self):
+    def test_find_pricing_exact(self) -> None:
         pricing = _find_pricing("gpt-4o")
         assert pricing is not None
         assert pricing["input"] == 2.50
 
-    def test_find_pricing_case_insensitive(self):
+    def test_find_pricing_case_insensitive(self) -> None:
         pricing = _find_pricing("GPT-4O")
         assert pricing is not None
 
-    def test_find_pricing_substring(self):
+    def test_find_pricing_substring(self) -> None:
         pricing = _find_pricing("gpt-4o-2024-08-06")
         assert pricing is not None
 
-    def test_find_pricing_unknown(self):
+    def test_find_pricing_unknown(self) -> None:
         pricing = _find_pricing("totally-made-up")
         assert pricing is None
 
 
 class TestCostWeightedRouting:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.settings = Settings(
             upstream_base_url="https://api.openai.com/v1",
             upstream_api_key="test-key",
         )
 
-    def test_select_provider_returns_configured_provider(self):
+    def test_select_provider_returns_configured_provider(self) -> None:
         router = ProviderRouter(self.settings)
         payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
         provider = router.select_provider(payload)
         assert provider is not None
         assert provider.get_provider_name() == "openai"
 
-    def test_select_provider_preferred_overrides_cost(self):
+    def test_select_provider_preferred_overrides_cost(self) -> None:
         router = ProviderRouter(self.settings)
         payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
         provider = router.select_provider(payload, preferred_provider="openai")
         assert provider is not None
         assert provider.get_provider_name() == "openai"
 
-    def test_select_provider_no_providers_raises(self):
+    def test_select_provider_no_providers_raises(self) -> None:
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         router = ProviderRouter(settings)
         payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
         with pytest.raises(Exception):
             router.select_provider(payload)
 
-    def test_select_provider_single_provider(self):
+    def test_select_provider_single_provider(self) -> None:
         router = ProviderRouter(self.settings)
         payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
         provider = router.select_provider(payload)
         assert provider.get_provider_name() == "openai"
 
     @pytest.mark.asyncio
-    async def test_chat_completions_demo_mode_no_providers(self):
+    async def test_chat_completions_demo_mode_no_providers(self) -> None:
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         router = ProviderRouter(settings)
         response = await router.chat_completions({"model": "demo", "messages": []})

@@ -1,5 +1,6 @@
-import time
 import logging
+import time
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -7,7 +8,7 @@ from starlette.responses import Response
 logger = logging.getLogger(__name__)
 
 try:
-    from prometheus_client import Counter, Histogram, generate_latest, REGISTRY
+    from prometheus_client import REGISTRY, Counter, Histogram, generate_latest
 
     request_count = Counter(
         "verialign_requests_total",
@@ -52,10 +53,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         finally:
             elapsed = time.monotonic() - start
             request_count.labels(
-                method=request.method, endpoint=request.url.path, status=status
+                method=request.method,
+                endpoint=request.url.path,
+                status=status,
             ).inc()
             request_latency.labels(
-                method=request.method, endpoint=request.url.path
+                method=request.method,
+                endpoint=request.url.path,
             ).observe(elapsed)
 
 
@@ -66,5 +70,6 @@ def metrics_response() -> Response:
             media_type="text/plain",
         )
     return Response(
-        content=generate_latest(REGISTRY), media_type="text/plain; charset=utf-8"
+        content=generate_latest(REGISTRY),
+        media_type="text/plain; charset=utf-8",
     )

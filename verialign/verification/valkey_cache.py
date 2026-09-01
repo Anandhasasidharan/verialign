@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 
@@ -31,7 +32,9 @@ class ValkeyCache(VerificationCache):
             self._enabled = False
 
     def get(
-        self, text: str, context: object | None = None
+        self,
+        text: str,
+        context: object | None = None,
     ) -> VerificationResult | None:
         if self._enabled and self._client is not None:
             try:
@@ -47,7 +50,10 @@ class ValkeyCache(VerificationCache):
         return super().get(text, context)
 
     def set(
-        self, text: str, context: object | None, result: VerificationResult
+        self,
+        text: str,
+        context: object | None,
+        result: VerificationResult,
     ) -> None:
         if self._enabled and self._client is not None:
             try:
@@ -58,7 +64,7 @@ class ValkeyCache(VerificationCache):
                         "contradictions": [c.__dict__ for c in result.contradictions],
                         "checklist": [c.__dict__ for c in result.checklist],
                         "summary": result.summary,
-                    }
+                    },
                 )
                 self._client.setex(key, self._ttl, data)
                 return
@@ -68,8 +74,6 @@ class ValkeyCache(VerificationCache):
 
     def clear(self) -> None:
         if self._enabled and self._client is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._client.flushdb()
-            except Exception:
-                pass
         super().clear()

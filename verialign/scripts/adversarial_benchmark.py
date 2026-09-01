@@ -1,5 +1,4 @@
-"""
-Adversarial test mode — hallucination detection benchmark.
+"""Adversarial test mode — hallucination detection benchmark.
 
 Feeds known factual errors through the verification pipeline and measures
 how many are correctly flagged as unsupported or contradictory.
@@ -30,7 +29,7 @@ BENCHMARK_CASES = [
             {
                 "id": "geo-1",
                 "text": "The capital of France is Paris. The capital of Germany is Berlin.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -41,7 +40,7 @@ BENCHMARK_CASES = [
             {
                 "id": "geo-2",
                 "text": "The Amazon River flows through Brazil. The Nile River flows through Egypt.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -52,7 +51,7 @@ BENCHMARK_CASES = [
             {
                 "id": "geo-3",
                 "text": "Mount Everest is located in Asia, in the Himalayas.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -61,7 +60,7 @@ BENCHMARK_CASES = [
     AdversarialCase(
         text="Water boils at 50 degrees Celsius at sea level.",
         context=[
-            {"id": "sci-1", "text": "Water boils at 100 degrees Celsius at sea level."}
+            {"id": "sci-1", "text": "Water boils at 100 degrees Celsius at sea level."},
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -72,7 +71,7 @@ BENCHMARK_CASES = [
             {
                 "id": "sci-2",
                 "text": "Humans have 23 pairs of chromosomes, for a total of 46.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -83,7 +82,7 @@ BENCHMARK_CASES = [
             {
                 "id": "sci-3",
                 "text": "The speed of light is approximately 300,000 kilometers per second.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -95,7 +94,7 @@ BENCHMARK_CASES = [
             {
                 "id": "hist-1",
                 "text": "World War II ended in 1945 with the surrender of Japan.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -106,7 +105,7 @@ BENCHMARK_CASES = [
             {
                 "id": "hist-2",
                 "text": "The Declaration of Independence was signed in 1776. The US Constitution was signed in 1787.",
-            }
+            },
         ],
         expected_unsupported=True,
         expected_contradictions=0,
@@ -134,7 +133,7 @@ BENCHMARK_CASES = [
     AdversarialCase(
         text="Water boils at 100 degrees Celsius.",
         context=[
-            {"id": "sci-4", "text": "Water boils at 100 degrees Celsius at sea level."}
+            {"id": "sci-4", "text": "Water boils at 100 degrees Celsius at sea level."},
         ],
         expected_unsupported=False,
         expected_contradictions=0,
@@ -173,13 +172,11 @@ async def run_benchmark(engine: VerificationEngine | None = None) -> Adversarial
                 flagged += 1
             else:
                 false_negatives += 1
-        else:
-            if is_unsupported:
-                false_positives += 1
+        elif is_unsupported:
+            false_positives += 1
 
-        if case.expected_contradictions > 0:
-            if has_contradictions:
-                contradictions_detected += 1
+        if case.expected_contradictions > 0 and has_contradictions:
+            contradictions_detected += 1
 
         details.append(
             {
@@ -188,7 +185,7 @@ async def run_benchmark(engine: VerificationEngine | None = None) -> Adversarial
                 "flagged_as_unsupported": is_unsupported,
                 "contradictions_found": len(result.contradictions),
                 "claim_statuses": [c.status for c in result.claims],
-            }
+            },
         )
 
     total = len(BENCHMARK_CASES)
@@ -211,27 +208,10 @@ async def run_benchmark(engine: VerificationEngine | None = None) -> Adversarial
 
 
 def print_results(result: AdversarialResult) -> None:
-    print("=" * 60)
-    print("ADVERSARIAL HALLUCINATION BENCHMARK")
-    print("=" * 60)
-    print(f"Total cases:               {result.total_cases}")
-    print(f"Hallucinations flagged:    {result.hallucinations_correctly_flagged}")
-    print(f"Contradictions detected:   {result.contradictions_correctly_detected}")
-    print(f"False positives:           {result.false_positives}")
-    print(f"False negatives:           {result.false_negatives}")
-    print(f"Accuracy:                  {result.accuracy:.3f}")
-    print("-" * 60)
-    print("Per-case breakdown:")
     for d in result.details:
-        status = (
-            "✓" if d["flagged_as_unsupported"] == d["expected_unsupported"] else "✗"
-        )
-        print(
-            f"  {status} {d['text']:<55} {'flagged' if d['flagged_as_unsupported'] else 'ok'}"
-        )
+        ("✓" if d["flagged_as_unsupported"] == d["expected_unsupported"] else "✗")
         if d["contradictions_found"] > 0:
-            print(f"      contradictions: {d['contradictions_found']}")
-    print("=" * 60)
+            pass
 
 
 async def main() -> None:

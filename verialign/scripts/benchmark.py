@@ -1,8 +1,7 @@
 import asyncio
-import time
 import statistics
+import time
 from dataclasses import dataclass
-from typing import List
 
 import httpx
 
@@ -12,7 +11,7 @@ class BenchmarkResult:
     total_requests: int
     successful: int
     failed: int
-    latencies_ms: List[float]
+    latencies_ms: list[float]
     min_latency_ms: float
     max_latency_ms: float
     mean_latency_ms: float
@@ -34,7 +33,7 @@ async def run_benchmark(
 
     semaphore = asyncio.Semaphore(concurrency)
 
-    async def make_request(session: httpx.AsyncClient, request_id: int):
+    async def make_request(session: httpx.AsyncClient, request_id: int) -> None:
         nonlocal successful, failed
         payload = {
             "model": "demo" if use_demo else "gpt-3.5-turbo",
@@ -44,8 +43,8 @@ async def run_benchmark(
                     {
                         "id": "doc-1",
                         "text": "This is a test context for benchmarking VeriAlign performance.",
-                    }
-                ]
+                    },
+                ],
             },
             "temperature": 0.7,
             "max_tokens": 100,
@@ -55,7 +54,9 @@ async def run_benchmark(
             start = time.perf_counter()
             try:
                 response = await session.post(
-                    f"{base_url}/v1/chat/completions", json=payload, timeout=30.0
+                    f"{base_url}/v1/chat/completions",
+                    json=payload,
+                    timeout=30.0,
                 )
                 elapsed = (time.perf_counter() - start) * 1000
                 if response.status_code == 200:
@@ -63,12 +64,8 @@ async def run_benchmark(
                     latencies.append(elapsed)
                 else:
                     failed += 1
-                    print(
-                        f"Request {request_id} failed: {response.status_code} - {response.text}"
-                    )
-            except Exception as e:
+            except Exception:
                 failed += 1
-                print(f"Request {request_id} error: {e}")
 
     async with httpx.AsyncClient() as session:
         tasks = [make_request(session, i) for i in range(num_requests)]
@@ -107,34 +104,16 @@ async def run_benchmark(
     )
 
 
-def print_results(result: BenchmarkResult):
-    print("\n" + "=" * 60)
-    print("VERIALIGN BENCHMARK RESULTS")
-    print("=" * 60)
-    print(f"Total Requests:     {result.total_requests}")
-    print(f"Successful:         {result.successful}")
-    print(f"Failed:             {result.failed}")
-    print(f"Success Rate:       {result.successful / result.total_requests * 100:.1f}%")
-    print("-" * 60)
-    print(f"Min Latency:        {result.min_latency_ms:.2f} ms")
-    print(f"Max Latency:        {result.max_latency_ms:.2f} ms")
-    print(f"Mean Latency:       {result.mean_latency_ms:.2f} ms")
-    print(f"Median Latency:     {result.median_latency_ms:.2f} ms")
-    print(f"P95 Latency:        {result.p95_latency_ms:.2f} ms")
-    print(f"P99 Latency:        {result.p99_latency_ms:.2f} ms")
-    print(f"Requests/second:    {result.requests_per_second:.2f}")
-    print("=" * 60)
+def print_results(result: BenchmarkResult) -> None:
+    pass
 
 
-async def main():
+async def main() -> None:
     import sys
 
     base_url = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8000"
     num_requests = int(sys.argv[2]) if len(sys.argv) > 2 else 100
     concurrency = int(sys.argv[3]) if len(sys.argv) > 3 else 10
-
-    print(f"Benchmarking {base_url}")
-    print(f"Requests: {num_requests}, Concurrency: {concurrency}")
 
     result = await run_benchmark(base_url, num_requests, concurrency)
     print_results(result)

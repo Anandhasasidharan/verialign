@@ -6,12 +6,11 @@ from verialign.proxy.main import app
 
 
 @pytest.fixture(autouse=True)
-def clear_settings():
+def clear_settings() -> None:
     get_settings.cache_clear()
-    yield
 
 
-def test_health_endpoint():
+def test_health_endpoint() -> None:
     client = TestClient(app)
     response = client.get("/health")
     assert response.status_code == 200
@@ -20,7 +19,7 @@ def test_health_endpoint():
     assert body["database"] == "ok"
 
 
-def test_demo_chat_completion_full_flow(tmp_path, monkeypatch):
+def test_demo_chat_completion_full_flow(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -40,8 +39,8 @@ def test_demo_chat_completion_full_flow(tmp_path, monkeypatch):
                     {
                         "id": "doc-1",
                         "text": "VeriAlign is a verification support proxy for LLM outputs.",
-                    }
-                ]
+                    },
+                ],
             },
             "temperature": 0.7,
             "max_tokens": 500,
@@ -79,7 +78,7 @@ def test_demo_chat_completion_full_flow(tmp_path, monkeypatch):
     assert isinstance(summary["checklist_items"], int)
 
 
-def test_streaming_endpoint(tmp_path, monkeypatch):
+def test_streaming_endpoint(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_PROXY_API_KEY", raising=False)
     monkeypatch.delenv("VERIALIGN_REQUIRE_PROXY_AUTH", raising=False)
@@ -104,7 +103,7 @@ def test_streaming_endpoint(tmp_path, monkeypatch):
     assert "VeriAlign" in body
 
 
-def test_proxy_auth_enforced(tmp_path, monkeypatch):
+def test_proxy_auth_enforced(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.setenv("VERIALIGN_PROXY_API_KEY", "test-secret")
     monkeypatch.setenv("VERIALIGN_REQUIRE_PROXY_AUTH", "true")
@@ -126,7 +125,7 @@ def test_proxy_auth_enforced(tmp_path, monkeypatch):
     assert response.status_code == 401
 
 
-def test_trace_persistence(tmp_path, monkeypatch):
+def test_trace_persistence(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -156,7 +155,7 @@ def test_trace_persistence(tmp_path, monkeypatch):
     assert trace["verification"]["summary"]["total_claims"] >= 0
 
 
-def test_multiple_requests_maintain_state(tmp_path, monkeypatch):
+def test_multiple_requests_maintain_state(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -182,7 +181,7 @@ def test_multiple_requests_maintain_state(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_verification_contradictions_detected(tmp_path, monkeypatch):
+async def test_verification_contradictions_detected(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -202,7 +201,7 @@ async def test_verification_contradictions_detected(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_verification_checklist_generated(tmp_path, monkeypatch):
+async def test_verification_checklist_generated(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -222,7 +221,7 @@ async def test_verification_checklist_generated(tmp_path, monkeypatch):
     assert "security" in categories or "deployment" in categories
 
 
-def test_rate_limit_headers(tmp_path, monkeypatch):
+def test_rate_limit_headers(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -247,7 +246,7 @@ def test_rate_limit_headers(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_unsupported_claim_detection(tmp_path, monkeypatch):
+async def test_unsupported_claim_detection(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -268,7 +267,7 @@ async def test_unsupported_claim_detection(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_supported_claim_detection(tmp_path, monkeypatch):
+async def test_supported_claim_detection(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)

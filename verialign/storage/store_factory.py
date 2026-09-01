@@ -1,8 +1,8 @@
 """Factory to create the appropriate trace store for the configured database."""
 
-from verialign.proxy.config import is_async_database, SQLITE_DEFAULT
-from verialign.storage.trace_store import TraceStore
+from verialign.proxy.config import SQLITE_DEFAULT, is_async_database
 from verialign.storage.async_trace_store import AsyncTraceStore
+from verialign.storage.trace_store import TraceStore
 
 
 def create_trace_store(

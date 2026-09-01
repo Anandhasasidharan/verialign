@@ -12,7 +12,7 @@ def clear_settings_cache():
     get_settings.cache_clear()
 
 
-def test_health():
+def test_health() -> None:
     client = TestClient(app)
     response = client.get("/health")
     assert response.status_code == 200
@@ -21,7 +21,7 @@ def test_health():
     assert body["database"] == "ok"
 
 
-def test_chat_completion_adds_verification(tmp_path, monkeypatch):
+def test_chat_completion_adds_verification(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -40,8 +40,8 @@ def test_chat_completion_adds_verification(tmp_path, monkeypatch):
                     {
                         "id": "doc-1",
                         "text": "VeriAlign is a verification support proxy for LLM outputs.",
-                    }
-                ]
+                    },
+                ],
             },
         },
     )
@@ -60,7 +60,7 @@ def test_chat_completion_adds_verification(tmp_path, monkeypatch):
     assert traces_data["traces"][0]["summary"]["total_claims"] >= 1
 
 
-def test_chat_completion_streaming_returns_events(tmp_path, monkeypatch):
+def test_chat_completion_streaming_returns_events(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_PROXY_API_KEY", raising=False)
     monkeypatch.delenv("VERIALIGN_REQUIRE_PROXY_AUTH", raising=False)
@@ -85,7 +85,9 @@ def test_chat_completion_streaming_returns_events(tmp_path, monkeypatch):
     assert "chatcmpl-demo-" in body
 
 
-def test_chat_completion_uses_demo_mode_without_provider_env(tmp_path, monkeypatch):
+def test_chat_completion_uses_demo_mode_without_provider_env(
+    tmp_path, monkeypatch
+) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -108,7 +110,7 @@ def test_chat_completion_uses_demo_mode_without_provider_env(tmp_path, monkeypat
     assert body["model"] == "demo"
 
 
-def test_chat_completion_requires_auth_when_enabled(tmp_path, monkeypatch):
+def test_chat_completion_requires_auth_when_enabled(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.setenv("VERIALIGN_PROXY_API_KEY", "test-secret-key")
     monkeypatch.setenv("VERIALIGN_REQUIRE_PROXY_AUTH", "true")
@@ -126,7 +128,7 @@ def test_chat_completion_requires_auth_when_enabled(tmp_path, monkeypatch):
     assert response.status_code == 401
 
 
-def test_verify_endpoint(tmp_path, monkeypatch):
+def test_verify_endpoint(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -143,7 +145,7 @@ def test_verify_endpoint(tmp_path, monkeypatch):
                 {
                     "id": "doc-1",
                     "text": "VeriAlign is a verification support proxy for LLM outputs.",
-                }
+                },
             ],
         },
     )
@@ -155,7 +157,7 @@ def test_verify_endpoint(tmp_path, monkeypatch):
     assert body["verification"]["summary"]["supported"] >= 1
 
 
-def test_verify_endpoint_requires_text(tmp_path, monkeypatch):
+def test_verify_endpoint_requires_text(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -168,7 +170,7 @@ def test_verify_endpoint_requires_text(tmp_path, monkeypatch):
     assert response.status_code == 400
 
 
-def test_verify_endpoint_works_without_context(tmp_path, monkeypatch):
+def test_verify_endpoint_works_without_context(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
@@ -187,7 +189,7 @@ def test_verify_endpoint_works_without_context(tmp_path, monkeypatch):
     assert "verification" in body
 
 
-def test_rate_limit_enforced(tmp_path, monkeypatch):
+def test_rate_limit_enforced(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_PROXY_API_KEY", raising=False)
     monkeypatch.delenv("VERIALIGN_REQUIRE_PROXY_AUTH", raising=False)
@@ -199,7 +201,7 @@ def test_rate_limit_enforced(tmp_path, monkeypatch):
     saved = rl_mod.get_rate_limiter()
     try:
         rl_mod.set_rate_limiter(
-            rl_mod.RateLimiter(rl_mod.RateLimitConfig(requests_per_minute=1))
+            rl_mod.RateLimiter(rl_mod.RateLimitConfig(requests_per_minute=1)),
         )
 
         from verialign.proxy.main import app
@@ -220,7 +222,7 @@ def test_rate_limit_enforced(tmp_path, monkeypatch):
         rl_mod.set_rate_limiter(saved)
 
 
-def test_chat_completion_works_with_valid_auth(tmp_path, monkeypatch):
+def test_chat_completion_works_with_valid_auth(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.setenv("VERIALIGN_PROXY_API_KEY", "test-secret-key")
     monkeypatch.setenv("VERIALIGN_REQUIRE_PROXY_AUTH", "true")

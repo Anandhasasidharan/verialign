@@ -1,7 +1,8 @@
-import streamlit as st
 import sqlite3
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+import streamlit as st
 
 st.set_page_config(
     page_title="VeriAlign Dashboard",
@@ -61,7 +62,7 @@ def render_sidebar():
     st.sidebar.title("🔍 VeriAlign")
     st.sidebar.caption("Inline verification — `docker compose up -d`")
     st.sidebar.caption(
-        "Headline is inline `verification` in response, not this dashboard."
+        "Headline is inline `verification` in response, not this dashboard.",
     )
 
     st.sidebar.divider()
@@ -92,15 +93,15 @@ def render_sidebar():
     return limit, page
 
 
-def render_overview(df):
+def render_overview(df) -> None:
     st.header("📊 Overview")
     st.caption(
-        "Dashboard is a trace inspector — the moat is the *inline* `verification` object in the API response (`docker compose up -d`, no sales call)."
+        "Dashboard is a trace inspector — the moat is the *inline* `verification` object in the API response (`docker compose up -d`, no sales call).",
     )
 
     if df.empty:
         st.info(
-            "No traces found. Make some requests through VeriAlign to see data here."
+            "No traces found. Make some requests through VeriAlign to see data here.",
         )
         return
 
@@ -150,7 +151,7 @@ def render_overview(df):
             st.bar_chart(model_counts)
 
 
-def render_per_model(df):
+def render_per_model(df) -> None:
     st.header("🤖 Per Model Metrics")
 
     if df.empty:
@@ -162,7 +163,7 @@ def render_per_model(df):
         return
 
     models = df["model"].unique()
-    selected_model = st.selectbox("Select Model", ["All"] + list(models))
+    selected_model = st.selectbox("Select Model", ["All", *list(models)])
 
     filtered_df = df if selected_model == "All" else df[df["model"] == selected_model]
 
@@ -197,7 +198,7 @@ def render_per_model(df):
     st.dataframe(filtered_df[display_cols].head(20), use_container_width=True)
 
 
-def render_per_task(df):
+def render_per_task(df) -> None:
     st.header("📋 Per Task Metrics")
 
     if df.empty:
@@ -295,7 +296,7 @@ def render_per_task(df):
     st.dataframe(task_stats, use_container_width=True)
 
 
-def render_drift(df):
+def render_drift(df) -> None:
     st.header("📈 Verification Drift Over Time")
 
     if df.empty:
@@ -327,7 +328,8 @@ def render_drift(df):
 
         if "total_claims" in daily.columns and daily["total_claims"].sum() > 0:
             daily["support_rate"] = daily["supported"] / daily["total_claims"].replace(
-                0, 1
+                0,
+                1,
             )
             st.subheader("Support Rate Over Time")
             st.line_chart(daily.set_index("date")["support_rate"])
@@ -335,7 +337,7 @@ def render_drift(df):
         st.info("Need more data over multiple days to show drift.")
 
 
-def render_contradictions(df):
+def render_contradictions(df) -> None:
     st.header("⚠️ Contradictions")
 
     if df.empty:
@@ -382,10 +384,10 @@ def render_contradictions(df):
     st.dataframe(contra_df[available_cols].head(50), use_container_width=True)
 
 
-def render_calibration(df):
+def render_calibration(df) -> None:
     st.header("📐 Calibration — Reliability Diagram")
     st.caption(
-        "If VeriAlign says 0.8, is it right 80% of the time? `docs/verification-calibration.md` is the source of truth; re-run `python -m verialign.scripts.benchmark_verification` on every `verialign/verification/*` change."
+        "If VeriAlign says 0.8, is it right 80% of the time? `docs/verification-calibration.md` is the source of truth; re-run `python -m verialign.scripts.benchmark_verification` on every `verialign/verification/*` change.",
     )
     from pathlib import Path as _Path
 
@@ -394,7 +396,7 @@ def render_calibration(df):
         st.markdown(doc.read_text()[:6000])
     else:
         st.info(
-            "Run `python -m verialign.scripts.benchmark_verification` to generate calibration."
+            "Run `python -m verialign.scripts.benchmark_verification` to generate calibration.",
         )
     if not df.empty and "trust_score" in df.columns:
         st.subheader("Live trust_score distribution (loaded traces)")
@@ -402,14 +404,14 @@ def render_calibration(df):
         if not trust.empty:
             st.bar_chart(trust.value_counts(bins=5, sort=False))
             st.caption(
-                f"Loaded traces ECE proxy: avg trust {trust.mean():.3f} vs supported rate — see doc for bucketed ECE."
+                f"Loaded traces ECE proxy: avg trust {trust.mean():.3f} vs supported rate — see doc for bucketed ECE.",
             )
 
 
-def render_trace_detail(df):
+def render_trace_detail(df) -> None:
     st.header("🔍 Trace Detail")
     st.caption(
-        "Shows inline `verification` (or `data.verification` when `response_format:json_object`) + tool-call grounding + policy outcome."
+        "Shows inline `verification` (or `data.verification` when `response_format:json_object`) + tool-call grounding + policy outcome.",
     )
 
     if df.empty:
@@ -447,7 +449,7 @@ def render_trace_detail(df):
         st.json(resp)
         if "error" in resp and resp["error"].get("type") == "verification_blocked":
             st.error(
-                f"Blocked by policy (422) — trust {resp.get('verification', {}).get('trust_score', '—')}"
+                f"Blocked by policy (422) — trust {resp.get('verification', {}).get('trust_score', '—')}",
             )
         elif (
             "data" in resp
@@ -469,7 +471,7 @@ def render_trace_detail(df):
         and "claims" in resp_for_lookup["data"]
     ):
         st.caption(
-            "Response used `response_format:json_object` — verification was nested under `data`."
+            "Response used `response_format:json_object` — verification was nested under `data`.",
         )
     st.json(verification)
     if verification.get("trust_score") is not None:
@@ -492,14 +494,15 @@ def render_trace_detail(df):
         st.subheader("Verification Checklist")
         for item in verification["checklist"]:
             priority_color = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(
-                item.get("priority", ""), "⚪"
+                item.get("priority", ""),
+                "⚪",
             )
             st.markdown(
-                f"{priority_color} **{item['category']}**: {item['description']}"
+                f"{priority_color} **{item['category']}**: {item['description']}",
             )
 
 
-def main():
+def main() -> None:
     limit, page = render_sidebar()
     df = load_traces(limit)
 

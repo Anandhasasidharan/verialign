@@ -1,5 +1,6 @@
 import re
 from functools import lru_cache
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,53 +13,65 @@ def is_async_database(url: str) -> bool:
 
 class Settings(BaseSettings):
     upstream_base_url: str | None = Field(
-        default=None, alias="VERIALIGN_UPSTREAM_BASE_URL"
+        default=None,
+        alias="VERIALIGN_UPSTREAM_BASE_URL",
     )
     upstream_api_key: str | None = Field(
-        default=None, alias="VERIALIGN_UPSTREAM_API_KEY"
+        default=None,
+        alias="VERIALIGN_UPSTREAM_API_KEY",
     )
     upstream_timeout_seconds: float = Field(
-        default=60.0, alias="VERIALIGN_UPSTREAM_TIMEOUT_SECONDS"
+        default=60.0,
+        alias="VERIALIGN_UPSTREAM_TIMEOUT_SECONDS",
     )
     db_path: str = Field(default="./verialign.sqlite3", alias="VERIALIGN_DB_PATH")
 
     database_url: str = Field(default=SQLITE_DEFAULT, alias="VERIALIGN_DATABASE_URL")
 
     web_search_api_key: str | None = Field(
-        default=None, alias="VERIALIGN_WEB_SEARCH_API_KEY"
+        default=None,
+        alias="VERIALIGN_WEB_SEARCH_API_KEY",
     )
     web_search_provider: str = Field(
-        default="tavily", alias="VERIALIGN_WEB_SEARCH_PROVIDER"
+        default="tavily",
+        alias="VERIALIGN_WEB_SEARCH_PROVIDER",
     )
 
     proxy_api_key: str | None = Field(default=None, alias="VERIALIGN_PROXY_API_KEY")
     require_proxy_auth: bool = Field(
-        default=False, alias="VERIALIGN_REQUIRE_PROXY_AUTH"
+        default=False,
+        alias="VERIALIGN_REQUIRE_PROXY_AUTH",
     )
 
     rate_limit_requests_per_minute: int = Field(
-        default=60, alias="VERIALIGN_RATE_LIMIT_RPM"
+        default=60,
+        alias="VERIALIGN_RATE_LIMIT_RPM",
     )
     rate_limit_tokens_per_minute: int = Field(
-        default=100000, alias="VERIALIGN_RATE_LIMIT_TPM"
+        default=100000,
+        alias="VERIALIGN_RATE_LIMIT_TPM",
     )
     rate_limit_key_rpm: int = Field(default=300, alias="VERIALIGN_RATE_LIMIT_KEY_RPM")
     rate_limit_key_tpm: int = Field(
-        default=500000, alias="VERIALIGN_RATE_LIMIT_KEY_TPM"
+        default=500000,
+        alias="VERIALIGN_RATE_LIMIT_KEY_TPM",
     )
 
     redact_traces: bool = Field(default=True, alias="VERIALIGN_REDACT_TRACES")
 
     max_request_body_size: int = Field(
-        default=10 * 1024 * 1024, alias="VERIALIGN_MAX_REQUEST_BODY_SIZE"
+        default=10 * 1024 * 1024,
+        alias="VERIALIGN_MAX_REQUEST_BODY_SIZE",
     )
 
     cors_allowed_origins: list[str] = Field(
-        default_factory=list, alias="VERIALIGN_CORS_ALLOWED_ORIGINS"
+        default_factory=list,
+        alias="VERIALIGN_CORS_ALLOWED_ORIGINS",
     )
 
     proxy_timeout_seconds: float = Field(
-        default=120.0, alias="VERIALIGN_PROXY_TIMEOUT_SECONDS"
+        default=120.0,
+        alias="VERIALIGN_PROXY_TIMEOUT_SECONDS",
     )
 
     valkey_url: str | None = Field(default=None, alias="VERIALIGN_VALKEY_URL")
@@ -66,22 +79,28 @@ class Settings(BaseSettings):
     enable_otel: bool = Field(default=False, alias="VERIALIGN_ENABLE_OTEL")
     admin_api_key: str | None = Field(default=None, alias="VERIALIGN_ADMIN_API_KEY")
     safety_jailbreak_enabled: bool = Field(
-        default=True, alias="VERIALIGN_SAFETY_JAILBREAK_ENABLED"
+        default=True,
+        alias="VERIALIGN_SAFETY_JAILBREAK_ENABLED",
     )
     safety_toxicity_enabled: bool = Field(
-        default=True, alias="VERIALIGN_SAFETY_TOXICITY_ENABLED"
+        default=True,
+        alias="VERIALIGN_SAFETY_TOXICITY_ENABLED",
     )
     safety_pii_redact_enabled: bool = Field(
-        default=True, alias="VERIALIGN_SAFETY_PII_REDACT_ENABLED"
+        default=True,
+        alias="VERIALIGN_SAFETY_PII_REDACT_ENABLED",
     )
     alert_webhook_url: str | None = Field(
-        default=None, alias="VERIALIGN_ALERT_WEBHOOK_URL"
+        default=None,
+        alias="VERIALIGN_ALERT_WEBHOOK_URL",
     )
     alert_slack_webhook_url: str | None = Field(
-        default=None, alias="VERIALIGN_ALERT_SLACK_WEBHOOK_URL"
+        default=None,
+        alias="VERIALIGN_ALERT_SLACK_WEBHOOK_URL",
     )
     response_policy: str = Field(
-        default="pass-through", alias="VERIALIGN_RESPONSE_POLICY"
+        default="pass-through",
+        alias="VERIALIGN_RESPONSE_POLICY",
     )
     block_threshold: float = Field(default=0.5, alias="VERIALIGN_BLOCK_THRESHOLD")
 

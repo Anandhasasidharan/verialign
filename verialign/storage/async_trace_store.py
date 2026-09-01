@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy import text
 
-from verialign.verification.models import VerificationResult
-from verialign.storage.trace_store import redact_sensitive_data
 from verialign.storage.models import Base
+from verialign.storage.trace_store import redact_sensitive_data
+from verialign.verification.models import VerificationResult
 
 
 class AsyncTraceStore:
@@ -22,7 +22,9 @@ class AsyncTraceStore:
             from sqlalchemy.ext.asyncio import create_async_engine
 
             self._engine = create_async_engine(
-                self.database_url, pool_size=10, max_overflow=20
+                self.database_url,
+                pool_size=10,
+                max_overflow=20,
             )
         return self._engine
 
@@ -31,7 +33,8 @@ class AsyncTraceStore:
             from sqlalchemy.ext.asyncio import async_sessionmaker
 
             self._session_factory = async_sessionmaker(
-                self._get_engine(), expire_on_commit=False
+                self._get_engine(),
+                expire_on_commit=False,
             )
         return self._session_factory
 
@@ -78,7 +81,7 @@ class AsyncTraceStore:
                     FROM traces
                     ORDER BY id DESC
                     LIMIT :limit
-                    """
+                    """,
                 ),
                 {"limit": bounded_limit},
             )
@@ -112,7 +115,7 @@ class AsyncTraceStore:
                     "response": response_data,
                     "verification": verification_data,
                     "summary": verification_data.get("summary", {}),
-                }
+                },
             )
         return traces
 

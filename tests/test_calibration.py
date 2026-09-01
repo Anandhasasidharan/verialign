@@ -1,9 +1,10 @@
 import pytest
+
 from verialign.scripts.benchmark_verification import run_benchmark
 
 
 @pytest.mark.asyncio
-async def test_benchmark_returns_calibration():
+async def test_benchmark_returns_calibration() -> None:
     result = await run_benchmark()
     assert hasattr(result, "calibration")
     assert hasattr(result, "ece")
@@ -19,7 +20,7 @@ async def test_benchmark_returns_calibration():
 
 
 @pytest.mark.asyncio
-async def test_benchmark_accuracy_and_ece_bounded():
+async def test_benchmark_accuracy_and_ece_bounded() -> None:
     result = await run_benchmark()
     assert 0 <= result.accuracy <= 1
     assert 0 <= result.ece <= 1

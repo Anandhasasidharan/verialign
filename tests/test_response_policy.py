@@ -1,6 +1,7 @@
 import pytest
+
 from verialign.proxy.middleware.response_handler import ResponseHandler
-from verialign.verification.models import VerificationResult, VerifiedClaim, SourceMatch
+from verialign.verification.models import SourceMatch, VerificationResult, VerifiedClaim
 
 
 class LowTrustEngine:
@@ -13,7 +14,7 @@ class LowTrustEngine:
                     status="unsupported",
                     confidence=0.2,
                     sources=[],
-                )
+                ),
             ],
             contradictions=[],
             checklist=[],
@@ -30,9 +31,9 @@ class HighTrustEngine:
                     status="supported",
                     confidence=0.95,
                     sources=[
-                        SourceMatch(source_id="doc-1", score=0.9, excerpt="truth")
+                        SourceMatch(source_id="doc-1", score=0.9, excerpt="truth"),
                     ],
-                )
+                ),
             ],
             contradictions=[],
             checklist=[],
@@ -41,9 +42,11 @@ class HighTrustEngine:
 
 
 @pytest.mark.asyncio
-async def test_policy_pass_through_default():
+async def test_policy_pass_through_default() -> None:
     handler = ResponseHandler(
-        LowTrustEngine(), policy="pass-through", block_threshold=0.5
+        LowTrustEngine(),
+        policy="pass-through",
+        block_threshold=0.5,
     )
     upstream = {
         "id": "t",
@@ -57,7 +60,7 @@ async def test_policy_pass_through_default():
 
 
 @pytest.mark.asyncio
-async def test_policy_warn_sets_header_and_injects_caveat():
+async def test_policy_warn_sets_header_and_injects_caveat() -> None:
     handler = ResponseHandler(LowTrustEngine(), policy="warn", block_threshold=0.5)
     upstream = {
         "id": "t",
@@ -72,7 +75,7 @@ async def test_policy_warn_sets_header_and_injects_caveat():
 
 
 @pytest.mark.asyncio
-async def test_policy_warn_no_trigger_when_high_trust():
+async def test_policy_warn_no_trigger_when_high_trust() -> None:
     handler = ResponseHandler(HighTrustEngine(), policy="warn", block_threshold=0.5)
     upstream = {
         "id": "t",
@@ -84,7 +87,7 @@ async def test_policy_warn_no_trigger_when_high_trust():
 
 
 @pytest.mark.asyncio
-async def test_policy_block_returns_422():
+async def test_policy_block_returns_422() -> None:
     handler = ResponseHandler(LowTrustEngine(), policy="block", block_threshold=0.5)
     upstream = {
         "id": "t",
@@ -99,7 +102,7 @@ async def test_policy_block_returns_422():
 
 
 @pytest.mark.asyncio
-async def test_policy_block_no_trigger_high_trust():
+async def test_policy_block_no_trigger_high_trust() -> None:
     handler = ResponseHandler(HighTrustEngine(), policy="block", block_threshold=0.5)
     upstream = {
         "id": "t",
@@ -111,7 +114,7 @@ async def test_policy_block_no_trigger_high_trust():
 
 
 @pytest.mark.asyncio
-async def test_structured_output_nests_under_data():
+async def test_structured_output_nests_under_data() -> None:
     engine = HighTrustEngine()
     handler = ResponseHandler(engine, structured_output=True, policy="pass-through")
     upstream = {
@@ -125,9 +128,12 @@ async def test_structured_output_nests_under_data():
 
 
 @pytest.mark.asyncio
-async def test_structured_output_block_nests():
+async def test_structured_output_block_nests() -> None:
     handler = ResponseHandler(
-        LowTrustEngine(), structured_output=True, policy="block", block_threshold=0.5
+        LowTrustEngine(),
+        structured_output=True,
+        policy="block",
+        block_threshold=0.5,
     )
     upstream = {
         "id": "t",

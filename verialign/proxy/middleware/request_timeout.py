@@ -1,5 +1,6 @@
 import asyncio
 import logging
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -14,10 +15,10 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         try:
-            response = await asyncio.wait_for(
-                call_next(request), timeout=self.timeout_seconds
+            return await asyncio.wait_for(
+                call_next(request),
+                timeout=self.timeout_seconds,
             )
-            return response
         except asyncio.TimeoutError:
             logger.warning(
                 "request_timeout",
@@ -30,6 +31,6 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
                         "message": f"Request timed out after {self.timeout_seconds}s",
                         "type": "timeout_error",
                         "status_code": 408,
-                    }
+                    },
                 },
             )

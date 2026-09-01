@@ -1,5 +1,5 @@
-import re
 import json
+import re
 from typing import Any
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?])\s+")
@@ -60,7 +60,7 @@ class ClaimExtractor:
         try:
             prompt = _LLM_EXTRACT_PROMPT.format(text=text[:2000])
             result = self.llm_client(
-                {"messages": [{"role": "user", "content": prompt}], "temperature": 0.1}
+                {"messages": [{"role": "user", "content": prompt}], "temperature": 0.1},
             )
             if hasattr(result, "__await__"):
                 result = await result
@@ -73,8 +73,7 @@ class ClaimExtractor:
             if content.startswith("```"):
                 content = content.split("\n", 1)[-1]
                 content = content.rsplit("```", 1)[0]
-            if content.startswith("json"):
-                content = content[4:]
+            content = content.removeprefix("json")
 
             claims = json.loads(content)
             if isinstance(claims, list) and all(isinstance(c, str) for c in claims):
@@ -110,5 +109,4 @@ class ClaimExtractor:
         return [claim]
 
     def _clean(self, sentence: str) -> str:
-        sentence = re.sub(r"\s+", " ", sentence).strip(" -\n\t")
-        return sentence
+        return re.sub(r"\s+", " ", sentence).strip(" -\n\t")

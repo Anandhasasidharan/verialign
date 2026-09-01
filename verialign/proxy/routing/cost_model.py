@@ -30,7 +30,9 @@ def calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float |
 
 
 def estimate_cost(
-    model: str, input_tokens: int, target_output_tokens: int = 1024
+    model: str,
+    input_tokens: int,
+    target_output_tokens: int = 1024,
 ) -> float | None:
     pricing = _find_pricing(model)
     if pricing is None:

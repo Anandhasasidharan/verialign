@@ -2,6 +2,7 @@
 
 import asyncio
 from dataclasses import dataclass
+
 from verialign.verification.engine import VerificationEngine
 
 
@@ -29,7 +30,7 @@ BENCHMARK_CASES = [
             {
                 "id": "doc-1",
                 "text": "At standard pressure, water boils at 100 degrees Celsius.",
-            }
+            },
         ],
         expected_status="supported",
     ),
@@ -41,14 +42,14 @@ BENCHMARK_CASES = [
     VerificationBenchmarkCase(
         text="Python was created by Guido van Rossum.",
         context=[
-            {"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."}
+            {"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."},
         ],
         expected_status="supported",
     ),
     VerificationBenchmarkCase(
         text="Python was created by Linus Torvalds.",
         context=[
-            {"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."}
+            {"id": "doc-1", "text": "Python was created in 1991 by Guido van Rossum."},
         ],
         expected_status="unsupported",
     ),
@@ -58,7 +59,7 @@ BENCHMARK_CASES = [
             {
                 "id": "doc-1",
                 "text": "The system uses JWT for authentication and RBAC for authorization.",
-            }
+            },
         ],
         expected_status="supported",
     ),
@@ -68,7 +69,7 @@ BENCHMARK_CASES = [
             {
                 "id": "doc-1",
                 "text": "Passwords are stored as bcrypt hashes with a cost factor of 12.",
-            }
+            },
         ],
         expected_status="supported",
     ),
@@ -78,7 +79,7 @@ BENCHMARK_CASES = [
             {
                 "id": "doc-1",
                 "text": "Mount Everest's height was officially recognized as 8,848 meters (29,029 ft) in 2020.",
-            }
+            },
         ],
         expected_status="supported",
     ),
@@ -88,7 +89,7 @@ BENCHMARK_CASES = [
             {
                 "id": "doc-1",
                 "text": "The Tokyo prefecture has a population of approximately 14 million people.",
-            }
+            },
         ],
         expected_status="unsupported",
     ),
@@ -164,7 +165,7 @@ async def run_benchmark() -> BenchmarkResult:
                     "avg_confidence": 0.0,
                     "accuracy": 0.0,
                     "ece_contrib": 0.0,
-                }
+                },
             )
             continue
         avg_conf_bucket = sum(p[0] for p in bucket_points) / count
@@ -182,7 +183,7 @@ async def run_benchmark() -> BenchmarkResult:
                 "avg_confidence": round(avg_conf_bucket, 3),
                 "accuracy": round(acc_bucket, 3),
                 "ece_contrib": round(ece_contrib, 4),
-            }
+            },
         )
 
     return BenchmarkResult(
@@ -197,34 +198,10 @@ async def run_benchmark() -> BenchmarkResult:
 
 
 def print_results(result: BenchmarkResult) -> None:
-    print("=" * 60)
-    print("VERIFICATION QUALITY BENCHMARK")
-    print("=" * 60)
-    print(f"Total cases:  {result.total}")
-    print(f"Correct:      {result.correct}")
-    print(f"Incorrect:    {result.incorrect}")
-    print(f"Accuracy:     {result.accuracy:.3f}")
-    print("-" * 60)
-    print("Per-status breakdown:")
-    for status, stats in sorted(result.by_status.items()):
-        acc = stats["correct"] / stats["total"] if stats["total"] > 0 else 0
-        print(
-            f"  {status:20s}: {stats['correct']}/{stats['total']} correct ({acc:.1%})"
-        )
-    print("-" * 60)
-    print(
-        "Calibration (reliability diagram): predicted confidence vs observed correctness"
-    )
-    print(f"  Expected Calibration Error (ECE): {result.ece:.4f}")
-    print(f"  {'Bucket':<12} {'Count':<6} {'AvgConf':<8} {'Accuracy':<8} {'|Gap|'}")
+    for _status, stats in sorted(result.by_status.items()):
+        stats["correct"] / stats["total"] if stats["total"] > 0 else 0
     for b in result.calibration:
-        gap = abs(b["avg_confidence"] - b["accuracy"]) if b["count"] else 0
-        print(
-            f"  {b['bucket']:<12} {b['count']:<6} {b['avg_confidence']:<8} {b['accuracy']:<8} {gap:.3f}"
-        )
-    print("=" * 60)
-    print("Note: answers 'if VeriAlign says 0.8, is it right 80% of the time?'")
-    print("Re-run on every verification-engine change (CI).")
+        abs(b["avg_confidence"] - b["accuracy"]) if b["count"] else 0
 
 
 async def main() -> None:

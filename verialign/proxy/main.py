@@ -1,52 +1,55 @@
 import json
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import replace
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, Annotated
 
-from fastapi import FastAPI, Query, Request, HTTPException, Depends
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.security import APIKeyHeader
 
+from verialign.proxy.admin import router as admin_router
 from verialign.proxy.config import get_settings
-from verialign.proxy.routing.cost_model import calculate_cost
-from verialign.proxy.routing.provider_router import (
-    ProviderRouter,
-    ProviderError,
-    close_http_client,
-)
-from verialign.proxy.routing.fallback import with_fallback
-from verialign.proxy.middleware.rate_limiter import (
-    RateLimiter,
-    RateLimitConfig,
-    get_rate_limiter,
-)
-from verialign.proxy.middleware.request_handler import (
-    validate_request,
-    build_upstream_payload,
-)
-from verialign.proxy.middleware.response_handler import ResponseHandler
-from verialign.proxy.otel_genai import emit_genai_span
+from verialign.proxy.middleware.body_size_limit import RequestBodySizeLimitMiddleware
 from verialign.proxy.middleware.logging_middleware import (
-    configure_logging,
     CorrelationIdMiddleware,
+    configure_logging,
     get_request_id,
 )
-from verialign.proxy.middleware.body_size_limit import RequestBodySizeLimitMiddleware
 from verialign.proxy.middleware.metrics_middleware import (
     MetricsMiddleware,
     metrics_response,
 )
+from verialign.proxy.middleware.rate_limiter import (
+    RateLimitConfig,
+    RateLimiter,
+    get_rate_limiter,
+)
+from verialign.proxy.middleware.request_handler import (
+    build_upstream_payload,
+    validate_request,
+)
 from verialign.proxy.middleware.request_timeout import RequestTimeoutMiddleware
+from verialign.proxy.middleware.response_handler import ResponseHandler
 from verialign.proxy.middleware.safety_middleware import SafetyMiddleware
-from verialign.proxy.admin import router as admin_router
-from verialign.storage.store_factory import create_trace_store
+from verialign.proxy.otel_genai import emit_genai_span
+from verialign.proxy.routing.cost_model import calculate_cost
+from verialign.proxy.routing.fallback import with_fallback
+from verialign.proxy.routing.provider_router import (
+    ProviderError,
+    ProviderRouter,
+    close_http_client,
+)
 from verialign.storage.async_trace_store import AsyncTraceStore
-from verialign.storage.trace_store import TraceStore
+from verialign.storage.store_factory import create_trace_store
+from verialign.verification.alerting import send_alert
 from verialign.verification.engine import VerificationEngine
 from verialign.verification.valkey_cache import ValkeyCache
-from verialign.verification.alerting import send_alert
+
+if TYPE_CHECKING:
+    from verialign.storage.trace_store import TraceStore
 
 logger = logging.getLogger(__name__)
 
@@ -68,16 +71,16 @@ async def lifespan(app: FastAPI):
     if settings.enable_otel:
         try:
             from opentelemetry import trace
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
-            from opentelemetry.sdk.resources import Resource
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                 OTLPSpanExporter,
             )
             from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
             provider = TracerProvider(
-                resource=Resource.create({"service.name": "verialign"})
+                resource=Resource.create({"service.name": "verialign"}),
             )
             provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
             trace.set_tracer_provider(provider)
@@ -91,7 +94,7 @@ async def lifespan(app: FastAPI):
             tokens_per_minute=settings.rate_limit_tokens_per_minute,
             key_requests_per_minute=settings.rate_limit_key_rpm,
             key_tokens_per_minute=settings.rate_limit_key_tpm,
-        )
+        ),
     )
     get_rate_limiter.__globals__["_global_limiter"] = limiter
 
@@ -103,14 +106,16 @@ async def lifespan(app: FastAPI):
                 "demo_mode_with_upstream_keys",
                 extra={
                     "detail": "Upstream API keys are set but no provider is fully configured. "
-                    "Check VERIALIGN_UPSTREAM_BASE_URL and VERIALIGN_UPSTREAM_API_KEY."
+                    "Check VERIALIGN_UPSTREAM_BASE_URL and VERIALIGN_UPSTREAM_API_KEY.",
                 },
             )
 
     logger.info("server_started", extra={"settings": self_sanitize(settings)})
 
     store = create_trace_store(
-        settings.database_url, settings.db_path, settings.redact_traces
+        settings.database_url,
+        settings.db_path,
+        settings.redact_traces,
     )
     if isinstance(store, AsyncTraceStore):
         await store.initialize()
@@ -163,10 +168,12 @@ settings_at_startup = get_settings()
 
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
-    RequestBodySizeLimitMiddleware, max_size=settings_at_startup.max_request_body_size
+    RequestBodySizeLimitMiddleware,
+    max_size=settings_at_startup.max_request_body_size,
 )
 app.add_middleware(
-    RequestTimeoutMiddleware, timeout_seconds=settings_at_startup.proxy_timeout_seconds
+    RequestTimeoutMiddleware,
+    timeout_seconds=settings_at_startup.proxy_timeout_seconds,
 )
 app.add_middleware(MetricsMiddleware)
 origins = settings_at_startup.cors_allowed_origins
@@ -200,7 +207,7 @@ def verify_proxy_auth(api_key: str = Depends(api_key_header)) -> None:
                         "message": "Invalid or missing API key",
                         "type": "auth_error",
                         "status_code": 401,
-                    }
+                    },
                 },
             )
 
@@ -213,7 +220,9 @@ async def health() -> dict:
         if store is None:
             settings = get_settings()
             store = create_trace_store(
-                settings.database_url, settings.db_path, settings.redact_traces
+                settings.database_url,
+                settings.db_path,
+                settings.redact_traces,
             )
         await _ensure_list_recent(store)
         db_ok = True
@@ -235,7 +244,7 @@ async def health() -> dict:
     }
 
 
-async def _ensure_list_recent(store):
+async def _ensure_list_recent(store) -> None:
     if isinstance(store, AsyncTraceStore):
         await store.list_recent(1)
     else:
@@ -247,12 +256,14 @@ def _get_store():
     if store is None:
         settings = get_settings()
         store = create_trace_store(
-            settings.database_url, settings.db_path, settings.redact_traces
+            settings.database_url,
+            settings.db_path,
+            settings.redact_traces,
         )
     return store
 
 
-async def _write_trace(store, request_payload, response_payload, verification):
+async def _write_trace(store, request_payload, response_payload, verification) -> None:
     if isinstance(store, AsyncTraceStore):
         await store.write_trace(request_payload, response_payload, verification)
     else:
@@ -266,7 +277,8 @@ async def metrics() -> Response:
 
 @app.get("/traces")
 async def traces(
-    limit: int = Query(default=25, ge=1, le=100), _: None = Depends(verify_proxy_auth)
+    limit: Annotated[int, Query(ge=1, le=100)] = 25,
+    _: None = Depends(verify_proxy_auth),
 ) -> dict:
     store = _get_store()
     if isinstance(store, AsyncTraceStore):
@@ -316,13 +328,15 @@ async def _handle_streaming(
                     cache=getattr(app.state, "cache", None),
                 )
                 verification = await verifier.verify(
-                    full_text, payload.get("metadata", {}).get("context", [])
+                    full_text,
+                    payload.get("metadata", {}).get("context", []),
                 )
                 trust_components = {
                     "supported": verification.summary.get("supported", 0),
                     "unsupported": verification.summary.get("unsupported", 0),
                     "contradictions": verification.summary.get(
-                        "contradictions_found", 0
+                        "contradictions_found",
+                        0,
                     ),
                     "checklist": verification.summary.get("checklist_items", 0),
                 }
@@ -361,7 +375,9 @@ async def _handle_streaming(
 
 
 @app.post("/v1/chat/completions")
-async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth)):
+async def chat_completions(
+    request: Request, _: Annotated[None, Depends(verify_proxy_auth)]
+):
     settings = get_settings()
 
     payload = await request.json()
@@ -377,7 +393,7 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
                     "message": str(exc),
                     "type": "validation_error",
                     "status_code": 400,
-                }
+                },
             },
         )
 
@@ -402,18 +418,25 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
                     "message": "Rate limit exceeded",
                     "type": "rate_limit_error",
                     "status_code": 429,
-                }
+                },
             },
             headers=rate_limit_headers,
         )
 
     if validated.stream:
         return await _handle_streaming(
-            validated, upstream_payload, router, rate_limiter, client_ip, settings
+            validated,
+            upstream_payload,
+            router,
+            rate_limiter,
+            client_ip,
+            settings,
         )
 
     fallback_response = await with_fallback(
-        router, upstream_payload, preferred_provider=None
+        router,
+        upstream_payload,
+        preferred_provider=None,
     )
 
     provider_name = fallback_response.provider_name
@@ -444,7 +467,10 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         cache=getattr(app.state, "cache", None),
     )
     response_handler = ResponseHandler(
-        verifier, structured_output=structured, policy=policy, block_threshold=threshold
+        verifier,
+        structured_output=structured,
+        policy=policy,
+        block_threshold=threshold,
     )
     augmented = await response_handler.augment(upstream_response, payload)
 
@@ -458,7 +484,7 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
             .get("message", {})
             .get("content", ""),
             augmented.verification,
-        )
+        ),
     )
 
     usage = upstream_response.get("usage", {})
@@ -513,7 +539,7 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
 
 
 @app.post("/v1/verify")
-async def verify_text(request: Request, _: None = Depends(verify_proxy_auth)):
+async def verify_text(request: Request, _: Annotated[None, Depends(verify_proxy_auth)]):
     settings = get_settings()
     payload = await request.json()
     text = payload.get("text", "")
@@ -527,7 +553,7 @@ async def verify_text(request: Request, _: None = Depends(verify_proxy_auth)):
                     "message": "text is required",
                     "type": "validation_error",
                     "status_code": 400,
-                }
+                },
             },
         )
 
@@ -550,7 +576,7 @@ async def verify_text(request: Request, _: None = Depends(verify_proxy_auth)):
                     "message": "Verification failed",
                     "type": "internal_error",
                     "status_code": 500,
-                }
+                },
             },
         )
 
@@ -573,6 +599,6 @@ async def provider_error_handler(request: Request, exc: ProviderError) -> JSONRe
                 "type": "upstream_error",
                 "provider": exc.provider,
                 "status_code": exc.status_code,
-            }
+            },
         },
     )

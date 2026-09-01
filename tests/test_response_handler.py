@@ -1,10 +1,11 @@
 import pytest
+
 from verialign.proxy.middleware.response_handler import ResponseHandler
-from verialign.verification.models import VerificationResult, VerifiedClaim, SourceMatch
+from verialign.verification.models import SourceMatch, VerificationResult, VerifiedClaim
 
 
 class MockVerificationEngine:
-    def __init__(self, result):
+    def __init__(self, result) -> None:
         self.result = result
 
     async def verify(self, text, context, response_data=None):
@@ -13,7 +14,7 @@ class MockVerificationEngine:
 
 class TestResponseHandler:
     @pytest.mark.asyncio
-    async def test_augment_adds_verification(self):
+    async def test_augment_adds_verification(self) -> None:
         mock_result = VerificationResult(
             claims=[
                 VerifiedClaim(
@@ -21,7 +22,7 @@ class TestResponseHandler:
                     status="supported",
                     confidence=0.9,
                     sources=[SourceMatch(source_id="doc-1", score=0.8, excerpt="Test")],
-                )
+                ),
             ],
             contradictions=[],
             checklist=[],
@@ -41,7 +42,7 @@ class TestResponseHandler:
         assert augmented.data["verification"]["summary"]["total_claims"] == 1
         assert augmented.verification == mock_result
 
-    def test_extract_assistant_text(self):
+    def test_extract_assistant_text(self) -> None:
         engine = MockVerificationEngine(None)
         handler = ResponseHandler(engine)
 
@@ -51,7 +52,7 @@ class TestResponseHandler:
         text = handler._extract_assistant_text(response)
         assert text == "Hello world"
 
-    def test_extract_assistant_text_empty(self):
+    def test_extract_assistant_text_empty(self) -> None:
         engine = MockVerificationEngine(None)
         handler = ResponseHandler(engine)
 
@@ -59,7 +60,7 @@ class TestResponseHandler:
         text = handler._extract_assistant_text(response)
         assert text == ""
 
-    def test_extract_assistant_text_no_content(self):
+    def test_extract_assistant_text_no_content(self) -> None:
         engine = MockVerificationEngine(None)
         handler = ResponseHandler(engine)
 
@@ -67,7 +68,7 @@ class TestResponseHandler:
         text = handler._extract_assistant_text(response)
         assert text == ""
 
-    def test_build_error_response(self):
+    def test_build_error_response(self) -> None:
         engine = MockVerificationEngine(None)
         handler = ResponseHandler(engine)
 

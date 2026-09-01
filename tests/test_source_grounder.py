@@ -1,4 +1,5 @@
 import pytest
+
 from verialign.verification.source_grounder import SourceGrounder
 
 
@@ -10,7 +11,7 @@ async def test_supported_claim() -> None:
             {
                 "id": "paper",
                 "text": "VeriAlign is a verification support proxy for LLM outputs.",
-            }
+            },
         ],
     )
 
@@ -21,7 +22,7 @@ async def test_supported_claim() -> None:
 
 @pytest.mark.asyncio
 async def test_unsupported_claim() -> None:
-    status, confidence, sources = await SourceGrounder().ground(
+    status, _confidence, _sources = await SourceGrounder().ground(
         "VeriAlign requires a GPU cluster.",
         [{"id": "plan", "text": "VeriAlign runs as a Python FastAPI service."}],
     )

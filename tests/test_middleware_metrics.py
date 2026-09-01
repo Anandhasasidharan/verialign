@@ -1,7 +1,7 @@
-from starlette.testclient import TestClient
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
+from starlette.testclient import TestClient
 
 from verialign.proxy.middleware.metrics_middleware import (
     MetricsMiddleware,
@@ -19,24 +19,24 @@ def _build_app():
 
 
 class TestMetricsMiddleware:
-    def test_metrics_response_returns_text(self):
+    def test_metrics_response_returns_text(self) -> None:
         resp = metrics_response()
         assert resp.status_code == 200
         assert resp.media_type.startswith("text/plain")
 
-    def test_metrics_endpoint_exists(self):
+    def test_metrics_endpoint_exists(self) -> None:
         app = _build_app()
         client = TestClient(app)
         resp = client.get("/test")
         assert resp.status_code == 200
 
-    def test_headers_are_set(self):
+    def test_headers_are_set(self) -> None:
         app = _build_app()
         client = TestClient(app)
         resp = client.get("/test")
         assert "date" not in resp.headers  # not interesting, just a sanity check
 
-    def test_metrics_endpoint_returns_prometheus_text(self):
+    def test_metrics_endpoint_returns_prometheus_text(self) -> None:
         resp = metrics_response()
         assert resp.status_code == 200
         body = resp.body.decode()

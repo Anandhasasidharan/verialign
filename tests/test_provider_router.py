@@ -1,64 +1,65 @@
 import pytest
+
+from verialign.proxy.config import Settings
 from verialign.proxy.routing.provider_router import (
-    ProviderRouter,
-    OpenAIProvider,
     AnthropicProvider,
     LocalProvider,
+    OpenAIProvider,
+    ProviderRouter,
 )
-from verialign.proxy.config import Settings
 
 
 class TestProviderRouter:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.settings = Settings(
             upstream_base_url="https://api.openai.com/v1",
             upstream_api_key="test-key",
         )
 
-    def test_get_configured_providers_with_openai(self):
+    def test_get_configured_providers_with_openai(self) -> None:
         router = ProviderRouter(self.settings)
         providers = router.get_configured_providers()
         assert len(providers) >= 1
         assert any(p.get_provider_name() == "openai" for p in providers)
 
-    def test_get_provider_by_name(self):
+    def test_get_provider_by_name(self) -> None:
         router = ProviderRouter(self.settings)
         provider = router.get_provider("openai")
         assert provider is not None
         assert provider.get_provider_name() == "openai"
 
-    def test_get_provider_not_found(self):
+    def test_get_provider_not_found(self) -> None:
         router = ProviderRouter(self.settings)
         provider = router.get_provider("nonexistent")
         assert provider is None
 
     @pytest.mark.asyncio
-    async def test_demo_mode_when_no_providers(self):
+    async def test_demo_mode_when_no_providers(self) -> None:
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         router = ProviderRouter(settings)
         response = await router.chat_completions({"model": "demo", "messages": []})
         assert response.provider_name == "demo"
         assert "VeriAlign" in response.data["choices"][0]["message"]["content"]
 
-    def test_openai_provider_configured(self):
+    def test_openai_provider_configured(self) -> None:
         provider = OpenAIProvider(self.settings)
         assert provider.is_configured() is True
         assert provider.get_provider_name() == "openai"
 
-    def test_openai_provider_not_configured(self):
+    def test_openai_provider_not_configured(self) -> None:
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         provider = OpenAIProvider(settings)
         assert provider.is_configured() is False
 
 
 class TestAnthropicProvider:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.settings = Settings(
             upstream_base_url="https://api.openai.com/v1",
             upstream_api_key="test-key",
         )
 
-    def test_convert_to_anthropic(self):
+    def test_convert_to_anthropic(self) -> None:
         provider = AnthropicProvider(self.settings)
         payload = {
             "model": "claude-3",
@@ -75,7 +76,7 @@ class TestAnthropicProvider:
         assert result["messages"][0]["role"] == "user"
         assert result["temperature"] == 0.7
 
-    def test_convert_from_anthropic(self):
+    def test_convert_from_anthropic(self) -> None:
         provider = AnthropicProvider(self.settings)
         response = {
             "id": "msg-123",
@@ -92,13 +93,13 @@ class TestAnthropicProvider:
 
 
 class TestLocalProvider:
-    def test_local_provider_not_configured_without_env(self):
+    def test_local_provider_not_configured_without_env(self) -> None:
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         provider = LocalProvider(settings)
         assert provider.is_configured() is False
         assert provider.get_provider_name() == "local"
 
-    def test_local_provider_configured_with_env(self, monkeypatch):
+    def test_local_provider_configured_with_env(self, monkeypatch) -> None:
         monkeypatch.setenv("VERIALIGN_LOCAL_BASE_URL", "http://localhost:11434")
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         provider = LocalProvider(settings)

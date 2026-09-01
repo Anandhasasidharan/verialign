@@ -8,13 +8,13 @@ class ContradictionDetector:
         (
             re.compile(r"\b(is|are|was|were)\b"),
             re.compile(
-                r"\b(is not|are not|was not|were not|isn't|aren't|wasn't|weren't)\b"
+                r"\b(is not|are not|was not|were not|isn't|aren't|wasn't|weren't)\b",
             ),
         ),
         (
             re.compile(r"\b(can|will|does|do|did)\b"),
             re.compile(
-                r"\b(cannot|can't|will not|won't|does not|doesn't|do not|don't|did not|didn't)\b"
+                r"\b(cannot|can't|will not|won't|does not|doesn't|do not|don't|did not|didn't)\b",
             ),
         ),
         (
@@ -113,37 +113,34 @@ class ContradictionDetector:
 
     def _check_antonyms(self, a: str, b: str) -> Contradiction | None:
         for verb, antonym in self.VERB_ANTONYMS.items():
-            if verb in a and antonym in b:
-                if self._similar_subject(a, b):
-                    return Contradiction(
-                        claim_a=a,
-                        claim_b=b,
-                        type="antonym",
-                        confidence=0.7,
-                    )
-            if verb in b and antonym in a:
-                if self._similar_subject(a, b):
-                    return Contradiction(
-                        claim_a=a,
-                        claim_b=b,
-                        type="antonym",
-                        confidence=0.7,
-                    )
+            if verb in a and antonym in b and self._similar_subject(a, b):
+                return Contradiction(
+                    claim_a=a,
+                    claim_b=b,
+                    type="antonym",
+                    confidence=0.7,
+                )
+            if verb in b and antonym in a and self._similar_subject(a, b):
+                return Contradiction(
+                    claim_a=a,
+                    claim_b=b,
+                    type="antonym",
+                    confidence=0.7,
+                )
         return None
 
     def _check_numeric_contradiction(self, a: str, b: str) -> Contradiction | None:
         numbers_a = re.findall(r"\b\d+(?:\.\d+)?\b", a)
         numbers_b = re.findall(r"\b\d+(?:\.\d+)?\b", b)
 
-        if numbers_a and numbers_b:
-            if self._similar_subject(a, b):
-                if numbers_a != numbers_b:
-                    return Contradiction(
-                        claim_a=a,
-                        claim_b=b,
-                        type="numeric",
-                        confidence=0.6,
-                    )
+        if numbers_a and numbers_b and self._similar_subject(a, b):
+            if numbers_a != numbers_b:
+                return Contradiction(
+                    claim_a=a,
+                    claim_b=b,
+                    type="numeric",
+                    confidence=0.6,
+                )
         return None
 
     def _similar_subject(self, a: str, b: str) -> bool:

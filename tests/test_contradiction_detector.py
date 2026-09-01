@@ -1,12 +1,13 @@
 import pytest
+
 from verialign.verification.contradiction_detector import ContradictionDetector
 
 
 class TestContradictionDetector:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.detector = ContradictionDetector()
 
-    def test_negation_contradiction(self):
+    def test_negation_contradiction(self) -> None:
         claims = [
             "The system is secure.",
             "The system is not secure.",
@@ -16,7 +17,7 @@ class TestContradictionDetector:
         assert contradictions[0].type == "negation"
         assert contradictions[0].confidence == 0.8
 
-    def test_antonym_contradiction(self):
+    def test_antonym_contradiction(self) -> None:
         claims = [
             "The temperature will increase.",
             "The temperature will decrease.",
@@ -30,7 +31,7 @@ class TestContradictionDetector:
                 assert c.confidence == 0.7
         assert found
 
-    def test_numeric_contradiction(self):
+    def test_numeric_contradiction(self) -> None:
         claims = [
             "The population is 1000000.",
             "The population is 2000000.",
@@ -44,7 +45,7 @@ class TestContradictionDetector:
                 assert c.confidence == 0.6
         assert found
 
-    def test_no_contradiction(self):
+    def test_no_contradiction(self) -> None:
         claims = [
             "The sky is blue.",
             "The grass is green.",
@@ -52,7 +53,7 @@ class TestContradictionDetector:
         contradictions = self.detector.detect(claims)
         assert len(contradictions) == 0
 
-    def test_multiple_claims(self):
+    def test_multiple_claims(self) -> None:
         claims = [
             "Feature A increases performance.",
             "Feature A decreases performance.",
@@ -61,11 +62,11 @@ class TestContradictionDetector:
         contradictions = self.detector.detect(claims)
         assert len(contradictions) >= 1
 
-    def test_empty_claims(self):
+    def test_empty_claims(self) -> None:
         contradictions = self.detector.detect([])
         assert contradictions == []
 
-    def test_single_claim(self):
+    def test_single_claim(self) -> None:
         claims = ["The system is secure."]
         contradictions = self.detector.detect(claims)
         assert contradictions == []

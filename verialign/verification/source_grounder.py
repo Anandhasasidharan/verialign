@@ -1,5 +1,5 @@
-import re
 import math
+import re
 from collections.abc import Iterable
 
 from verialign.verification.models import SourceMatch
@@ -65,7 +65,7 @@ class EmbeddingMatcher:
             return None
 
     def cosine_similarity(self, a: list[float], b: list[float]) -> float:
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = math.sqrt(sum(x * x for x in a))
         norm_b = math.sqrt(sum(x * x for x in b))
         if norm_a == 0 or norm_b == 0:
@@ -100,7 +100,7 @@ class TFIDFMatcher:
             return [0.0] * len(context_texts)
 
         try:
-            all_texts = [claim] + context_texts
+            all_texts = [claim, *context_texts]
             tfidf = self._vectorizer.fit_transform(all_texts)
             claim_vec = tfidf[0]
             similarities = []
@@ -151,7 +151,9 @@ class SourceGrounder:
         return self._tfidf_matcher
 
     async def ground(
-        self, claim: str, raw_context: object
+        self,
+        claim: str,
+        raw_context: object,
     ) -> tuple[str, float, list[SourceMatch]]:
         context = self._normalize_context(raw_context)
         matches: list[SourceMatch] = []
@@ -205,7 +207,10 @@ class SourceGrounder:
         return "unclear", top_score, matches[:3]
 
     def _match_against_context(
-        self, claim: str, context: list[tuple[str, str]], claim_terms: set[str]
+        self,
+        claim: str,
+        context: list[tuple[str, str]],
+        claim_terms: set[str],
     ) -> list[SourceMatch]:
         matches: list[SourceMatch] = []
         context_texts = [c[1] for c in context]
@@ -233,14 +238,16 @@ class SourceGrounder:
                         source_id=source_id,
                         score=round(combined, 3),
                         excerpt=text[:240],
-                    )
+                    ),
                 )
         return matches
 
     def _compute_semantic_scores(
-        self, claim: str, context_texts: list[str]
+        self,
+        claim: str,
+        context_texts: list[str],
     ) -> list[float]:
-        embeddings = self.embedding_matcher.encode([claim] + context_texts)
+        embeddings = self.embedding_matcher.encode([claim, *context_texts])
         if embeddings is not None:
             claim_emb = embeddings[0]
             return [
@@ -291,8 +298,7 @@ class SourceGrounder:
             )
             sem = sem_scores[i] if i < len(sem_scores) else 0.0
             combined = kw * 0.4 + sem * 0.6 if sem > 0 else kw
-            if combined > best:
-                best = combined
+            best = max(best, combined)
         return best
 
     def _terms(self, text: str) -> set[str]:

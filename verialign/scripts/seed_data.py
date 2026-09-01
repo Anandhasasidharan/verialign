@@ -1,7 +1,7 @@
 import json
 import random
 import sqlite3
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 DB_PATH = "./verialign.sqlite3"
 
@@ -113,10 +113,10 @@ TASK_CATEGORIES = [
 
 
 def generate_verification_data(prompt: str, response: str, context: list) -> dict:
-    from verialign.verification.claim_extractor import ClaimExtractor
-    from verialign.verification.source_grounder import SourceGrounder
-    from verialign.verification.contradiction_detector import ContradictionDetector
     from verialign.verification.checklist_generator import ChecklistGenerator
+    from verialign.verification.claim_extractor import ClaimExtractor
+    from verialign.verification.contradiction_detector import ContradictionDetector
+    from verialign.verification.source_grounder import SourceGrounder
 
     claim_extractor = ClaimExtractor()
     source_grounder = SourceGrounder()
@@ -139,7 +139,7 @@ def generate_verification_data(prompt: str, response: str, context: list) -> dic
                 ],
                 "claim_id": f"claim-{idx}",
                 "sentence_offset": idx,
-            }
+            },
         )
 
     contradictions = contradiction_detector.detect(claim_texts)
@@ -166,7 +166,7 @@ def generate_verification_data(prompt: str, response: str, context: list) -> dic
     }
 
 
-def create_sample_traces(count: int = 100):
+def create_sample_traces(count: int = 100) -> None:
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS traces (
@@ -187,7 +187,8 @@ def create_sample_traces(count: int = 100):
         context = random.sample(CONTEXTS, k=random.randint(1, 3))
 
         prompt_type = random.choices(
-            ["normal", "hallucinated", "contradiction"], weights=[0.7, 0.2, 0.1]
+            ["normal", "hallucinated", "contradiction"],
+            weights=[0.7, 0.2, 0.1],
         )[0]
 
         if prompt_type == "normal":
@@ -201,7 +202,9 @@ def create_sample_traces(count: int = 100):
         hours_ago = random.randint(0, 23)
         minutes_ago = random.randint(0, 59)
         created_at = datetime.now(timezone.utc) - timedelta(
-            days=days_ago, hours=hours_ago, minutes=minutes_ago
+            days=days_ago,
+            hours=hours_ago,
+            minutes=minutes_ago,
         )
 
         request_payload = {
@@ -222,7 +225,7 @@ def create_sample_traces(count: int = 100):
                     "index": 0,
                     "message": {"role": "assistant", "content": response},
                     "finish_reason": "stop",
-                }
+                },
             ],
             "usage": {
                 "prompt_tokens": random.randint(50, 200),
@@ -241,7 +244,7 @@ def create_sample_traces(count: int = 100):
                 json.dumps(request_payload),
                 json.dumps(response_payload),
                 json.dumps(verification),
-            )
+            ),
         )
 
         if len(rows) >= batch_size or i == count - 1:
@@ -250,11 +253,9 @@ def create_sample_traces(count: int = 100):
                 rows,
             )
             conn.commit()
-            print(f"  Progress: {i + 1}/{count}", end="\r")
             rows = []
 
     conn.close()
-    print(f"\nCreated {count} sample traces in {DB_PATH}")
 
 
 if __name__ == "__main__":

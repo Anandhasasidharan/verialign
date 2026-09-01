@@ -43,52 +43,63 @@ SUPPORTED_FIELDS = {
 def validate_request(payload: dict) -> ValidatedRequest:
     model = str(payload.get("model", "")).strip()
     if not model:
-        raise ValueError("model is required")
+        msg = "model is required"
+        raise ValueError(msg)
 
     messages = payload.get("messages")
     if not isinstance(messages, list) or not messages:
-        raise ValueError("messages must be a non-empty list")
+        msg = "messages must be a non-empty list"
+        raise ValueError(msg)
 
     for msg in messages:
         if not isinstance(msg, dict):
-            raise ValueError("each message must be an object")
+            msg_0 = "each message must be an object"
+            raise ValueError(msg_0)
         if "role" not in msg or "content" not in msg:
-            raise ValueError("each message must have role and content")
+            msg_0 = "each message must have role and content"
+            raise ValueError(msg_0)
 
     stream = bool(payload.get("stream", False))
 
     temperature = payload.get("temperature")
     if temperature is not None:
         if not isinstance(temperature, (int, float)) or not (0 <= temperature <= 2):
-            raise ValueError("temperature must be a number between 0 and 2")
+            msg_0 = "temperature must be a number between 0 and 2"
+            raise ValueError(msg_0)
 
     max_tokens = payload.get("max_tokens")
     if max_tokens is not None:
         if not isinstance(max_tokens, int) or max_tokens <= 0:
-            raise ValueError("max_tokens must be a positive integer")
+            msg_0 = "max_tokens must be a positive integer"
+            raise ValueError(msg_0)
 
     top_p = payload.get("top_p")
     if top_p is not None:
         if not isinstance(top_p, (int, float)) or not (0 <= top_p <= 1):
-            raise ValueError("top_p must be a number between 0 and 1")
+            msg_0 = "top_p must be a number between 0 and 1"
+            raise ValueError(msg_0)
 
     tools = payload.get("tools")
     if tools is not None and not isinstance(tools, list):
-        raise ValueError("tools must be a list")
+        msg_0 = "tools must be a list"
+        raise ValueError(msg_0)
 
     tool_choice = payload.get("tool_choice")
     if tool_choice is not None and not (
         isinstance(tool_choice, (str, dict)) or tool_choice is None
     ):
-        raise ValueError("tool_choice must be a string, object, or null")
+        msg_0 = "tool_choice must be a string, object, or null"
+        raise ValueError(msg_0)
 
     response_format = payload.get("response_format")
     if response_format is not None and not isinstance(response_format, dict):
-        raise ValueError("response_format must be an object")
+        msg_0 = "response_format must be an object"
+        raise ValueError(msg_0)
 
     metadata = payload.get("metadata")
     if metadata is not None and not isinstance(metadata, dict):
-        raise ValueError("metadata must be an object")
+        msg_0 = "metadata must be an object"
+        raise ValueError(msg_0)
 
     extra_fields = {k: v for k, v in payload.items() if k not in SUPPORTED_FIELDS}
 

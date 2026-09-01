@@ -1,16 +1,17 @@
 import pytest
+
 from verialign.verification.checklist_generator import ChecklistGenerator
 
 
 class TestChecklistGenerator:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.generator = ChecklistGenerator()
 
-    def test_generate_empty(self):
+    def test_generate_empty(self) -> None:
         items = self.generator.generate("", [], [])
         assert items == []
 
-    def test_generate_verification_items_unsupported(self):
+    def test_generate_verification_items_unsupported(self) -> None:
         claims = ["The Earth is flat."]
         verification = [{"status": "unsupported", "confidence": 0.2}]
         items = self.generator.generate("The Earth is flat.", claims, verification)
@@ -19,7 +20,7 @@ class TestChecklistGenerator:
         ]
         assert len(unsupported_items) >= 1
 
-    def test_generate_verification_items_unclear_low_confidence(self):
+    def test_generate_verification_items_unclear_low_confidence(self) -> None:
         claims = ["Something unclear."]
         verification = [{"status": "unclear", "confidence": 0.3}]
         items = self.generator.generate("Something unclear.", claims, verification)
@@ -28,25 +29,25 @@ class TestChecklistGenerator:
         ]
         assert len(unclear_items) >= 1
 
-    def test_generate_action_items_security(self):
+    def test_generate_action_items_security(self) -> None:
         text = "Make sure to encrypt the password and store the secret key securely."
         items = self.generator.generate(text, [], [])
         security_items = [i for i in items if i.category == "security"]
         assert len(security_items) >= 1
 
-    def test_generate_action_items_deployment(self):
+    def test_generate_action_items_deployment(self) -> None:
         text = "Deploy the docker container to kubernetes using the CI/CD pipeline."
         items = self.generator.generate(text, [], [])
         deployment_items = [i for i in items if i.category == "deployment"]
         assert len(deployment_items) >= 1
 
-    def test_generate_action_items_database(self):
+    def test_generate_action_items_database(self) -> None:
         text = "Run the database migration and create the index on the users table."
         items = self.generator.generate(text, [], [])
         db_items = [i for i in items if i.category == "database"]
         assert len(db_items) >= 1
 
-    def test_generate_claim_category_causal(self):
+    def test_generate_claim_category_causal(self) -> None:
         claims = [
             "A causes B because of mechanism X.",
             "C results in D since E happened.",
@@ -59,7 +60,7 @@ class TestChecklistGenerator:
         ]
         assert len(causal_items) >= 1
 
-    def test_generate_claim_category_conditional(self):
+    def test_generate_claim_category_conditional(self) -> None:
         claims = [
             "If X happens then Y will occur.",
             "When A is true then B follows.",
@@ -72,7 +73,7 @@ class TestChecklistGenerator:
         ]
         assert len(conditional_items) >= 1
 
-    def test_to_dict(self):
+    def test_to_dict(self) -> None:
         from verialign.verification.models import ChecklistItem
 
         items = [

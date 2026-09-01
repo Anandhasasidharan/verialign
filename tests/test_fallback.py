@@ -1,16 +1,20 @@
-import pytest
 from unittest.mock import MagicMock
-from verialign.proxy.routing.provider_router import (
-    ProviderRouter,
-    BaseProvider,
-    ProviderResponse,
-    ProviderError,
-)
+
+import pytest
+
 from verialign.proxy.routing.fallback import ProviderFallback, with_fallback
+from verialign.proxy.routing.provider_router import (
+    BaseProvider,
+    ProviderError,
+    ProviderResponse,
+    ProviderRouter,
+)
 
 
 class MockProvider(BaseProvider):
-    def __init__(self, name: str, should_fail: bool = False, fail_status: int = 500):
+    def __init__(
+        self, name: str, should_fail: bool = False, fail_status: int = 500
+    ) -> None:
         self.name = name
         self.should_fail = should_fail
         self.fail_status = fail_status
@@ -25,8 +29,11 @@ class MockProvider(BaseProvider):
     async def chat_completions(self, payload: dict) -> ProviderResponse:
         self.call_count += 1
         if self.should_fail:
+            msg = f"{self.name} failed"
             raise ProviderError(
-                f"{self.name} failed", status_code=self.fail_status, provider=self.name
+                msg,
+                status_code=self.fail_status,
+                provider=self.name,
             )
         return ProviderResponse(
             data={
@@ -39,7 +46,7 @@ class MockProvider(BaseProvider):
 
 class TestProviderFallback:
     @pytest.mark.asyncio
-    async def test_success_first_provider(self):
+    async def test_success_first_provider(self) -> None:
         router = MagicMock(spec=ProviderRouter)
         router.get_configured_providers.return_value = [
             MockProvider("provider1"),
@@ -54,7 +61,7 @@ class TestProviderFallback:
         assert result.attempts[0]["provider"] == "provider1"
 
     @pytest.mark.asyncio
-    async def test_fallback_to_second_provider(self):
+    async def test_fallback_to_second_provider(self) -> None:
         router = MagicMock(spec=ProviderRouter)
         provider1 = MockProvider("provider1", should_fail=True, fail_status=503)
         provider2 = MockProvider("provider2")
@@ -69,7 +76,7 @@ class TestProviderFallback:
         assert result.attempts[1]["success"] is True
 
     @pytest.mark.asyncio
-    async def test_non_retryable_error_raises_immediately(self):
+    async def test_non_retryable_error_raises_immediately(self) -> None:
         router = MagicMock(spec=ProviderRouter)
         provider = MockProvider("provider1", should_fail=True, fail_status=400)
         router.get_configured_providers.return_value = [provider]
@@ -82,7 +89,7 @@ class TestProviderFallback:
         assert exc_info.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_all_providers_fail_raises(self):
+    async def test_all_providers_fail_raises(self) -> None:
         router = MagicMock(spec=ProviderRouter)
         router.get_configured_providers.return_value = [
             MockProvider("provider1", should_fail=True, fail_status=503),
@@ -99,7 +106,7 @@ class TestProviderFallback:
 
 class TestWithFallback:
     @pytest.mark.asyncio
-    async def test_with_fallback_returns_response(self):
+    async def test_with_fallback_returns_response(self) -> None:
         router = MagicMock(spec=ProviderRouter)
         router.get_configured_providers.return_value = [MockProvider("provider1")]
 

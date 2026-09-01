@@ -1,14 +1,14 @@
-from typing import Callable
+from collections.abc import Callable
 
+from verialign.verification.checklist_generator import ChecklistGenerator
 from verialign.verification.claim_extractor import ClaimExtractor
 from verialign.verification.confidence_scorer import ConfidenceScorer
 from verialign.verification.contradiction_detector import ContradictionDetector
-from verialign.verification.checklist_generator import ChecklistGenerator
 from verialign.verification.models import (
+    ChecklistItem,
+    Contradiction,
     VerificationResult,
     VerifiedClaim,
-    Contradiction,
-    ChecklistItem,
 )
 from verialign.verification.source_grounder import SourceGrounder
 from verialign.verification.tool_grounder import ToolGrounder
@@ -60,7 +60,8 @@ class VerificationEngine:
             # This is the shared primitive with AgentGuard/AgentOps.
             if tool_calls:
                 t_status, t_conf, _reason = self.tool_grounder.ground(
-                    claim_text, tool_calls
+                    claim_text,
+                    tool_calls,
                 )
                 if t_status is not None:
                     # Build a source pointing at the tool record for auditability
@@ -74,7 +75,7 @@ class VerificationEngine:
                                 else "tool",
                                 score=t_conf,
                                 excerpt=str(tool_calls[0].get("result", ""))[:240],
-                            )
+                            ),
                         ]
                         if t_status == "unsupported"
                         else []
@@ -88,21 +89,24 @@ class VerificationEngine:
                             sources=tool_sources,
                             claim_id=claim_id,
                             sentence_offset=idx,
-                        )
+                        ),
                     )
                     continue
             status, confidence, sources = await self.source_grounder.ground(
-                claim_text, context
+                claim_text,
+                context,
             )
 
             if response_data:
                 logprobs_info = self.confidence_scorer.score_response(response_data)
                 if logprobs_info:
                     token_logprobs = [logprobs_info["avg_logprob"]] * len(
-                        claim_text.split()
+                        claim_text.split(),
                     )
                     confidence_score = self.confidence_scorer.score_claim(
-                        claim_text, confidence, token_logprobs
+                        claim_text,
+                        confidence,
+                        token_logprobs,
                     )
                     confidence = confidence_score.score
 
@@ -115,7 +119,7 @@ class VerificationEngine:
                     sources=sources,
                     claim_id=claim_id,
                     sentence_offset=idx,
-                )
+                ),
             )
 
         contradictions = [
@@ -125,12 +129,16 @@ class VerificationEngine:
         checklist = [
             ChecklistItem(**item.to_dict())
             for item in self.checklist_generator.generate(
-                text, claim_texts, [c.to_dict() for c in claims]
+                text,
+                claim_texts,
+                [c.to_dict() for c in claims],
             )
         ]
 
         partial = VerificationResult(
-            claims=claims, contradictions=contradictions, checklist=checklist
+            claims=claims,
+            contradictions=contradictions,
+            checklist=checklist,
         )
         trust_score = self.trust_scorer.score(partial)
         result = VerificationResult(

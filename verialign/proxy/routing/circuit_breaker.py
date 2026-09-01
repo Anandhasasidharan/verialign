@@ -1,11 +1,11 @@
-import time
 import logging
+import time
 from enum import Enum
 
 from verialign.proxy.routing.provider_router import (
+    BaseProvider,
     ProviderError,
     ProviderResponse,
-    BaseProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,14 +55,16 @@ class CircuitBreaker:
         if self._failure_count >= self._failure_threshold:
             self._state = CircuitState.OPEN
             logger.warning(
-                "circuit_opened", extra={"provider": self.provider.get_provider_name()}
+                "circuit_opened",
+                extra={"provider": self.provider.get_provider_name()},
             )
 
     async def chat_completions(self, payload: dict) -> ProviderResponse:
         current = self.state
         if current == CircuitState.OPEN:
+            msg = "Circuit breaker open"
             raise ProviderError(
-                "Circuit breaker open",
+                msg,
                 status_code=503,
                 provider=self.provider.get_provider_name(),
             )

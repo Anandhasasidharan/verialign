@@ -1,11 +1,12 @@
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from verialign.proxy.routing.circuit_breaker import CircuitBreaker, CircuitState
 from verialign.proxy.routing.provider_router import (
     BaseProvider,
-    ProviderResponse,
     ProviderError,
+    ProviderResponse,
 )
 
 
@@ -25,14 +26,14 @@ class _MockProvider(BaseProvider):
 
 
 class TestCircuitBreaker:
-    def test_closed_state(self):
+    def test_closed_state(self) -> None:
         p = _MockProvider()
         cb = CircuitBreaker(p, failure_threshold=3, cooldown_seconds=30)
         assert cb.state == CircuitState.CLOSED
         assert cb.is_available() is True
 
     @pytest.mark.asyncio
-    async def test_opens_after_threshold(self):
+    async def test_opens_after_threshold(self) -> None:
         p = _MockProvider()
         p._mock.side_effect = ProviderError("fail", status_code=502, provider="mock")
         cb = CircuitBreaker(p, failure_threshold=3, cooldown_seconds=30)
@@ -45,7 +46,7 @@ class TestCircuitBreaker:
         assert cb.is_available() is False
 
     @pytest.mark.asyncio
-    async def test_open_raises_immediately(self):
+    async def test_open_raises_immediately(self) -> None:
         p = _MockProvider()
         p._mock.side_effect = ProviderError("fail", status_code=502, provider="mock")
         cb = CircuitBreaker(p, failure_threshold=1, cooldown_seconds=999)
@@ -60,7 +61,7 @@ class TestCircuitBreaker:
         assert cb.is_available() is False
 
     @pytest.mark.asyncio
-    async def test_success_resets_counter(self):
+    async def test_success_resets_counter(self) -> None:
         p = _MockProvider()
         cb = CircuitBreaker(p, failure_threshold=2, cooldown_seconds=30)
         p._mock.side_effect = ProviderError("fail", status_code=502, provider="mock")
@@ -77,7 +78,7 @@ class TestCircuitBreaker:
         assert resp.data["ok"] is True
         assert cb.state == CircuitState.CLOSED
 
-    def test_get_status(self):
+    def test_get_status(self) -> None:
         p = _MockProvider(name="mock-test")
         cb = CircuitBreaker(p, failure_threshold=5, cooldown_seconds=60.0)
         status = cb.get_status()

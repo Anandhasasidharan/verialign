@@ -1,14 +1,15 @@
 from datetime import datetime, timezone
+
 from sqlalchemy import (
+    JSON,
     Column,
-    Integer,
-    String,
-    Text,
     DateTime,
     Float,
     ForeignKey,
     Index,
-    JSON,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -42,7 +43,9 @@ class Claim(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     trace_id = Column(
-        Integer, ForeignKey("traces.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("traces.id", ondelete="CASCADE"),
+        nullable=False,
     )
     claim_id = Column(String(100), nullable=False)
     text = Column(Text, nullable=False)
@@ -64,7 +67,9 @@ class Contradiction(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     trace_id = Column(
-        Integer, ForeignKey("traces.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("traces.id", ondelete="CASCADE"),
+        nullable=False,
     )
     claim_a = Column(Text, nullable=False)
     claim_b = Column(Text, nullable=False)
@@ -79,7 +84,9 @@ class ChecklistItem(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     trace_id = Column(
-        Integer, ForeignKey("traces.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("traces.id", ondelete="CASCADE"),
+        nullable=False,
     )
     description = Column(Text, nullable=False)
     category = Column(String(100), nullable=False)

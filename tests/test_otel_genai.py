@@ -4,11 +4,11 @@ from verialign.proxy.otel_genai import emit_genai_span
 
 
 class TestOtelGenai:
-    def test_emit_genai_span_sets_attributes(self):
+    def test_emit_genai_span_sets_attributes(self) -> None:
         attrs = {}
 
         class FakeSpan:
-            def set_attribute(self, key, value):
+            def set_attribute(self, key, value) -> None:
                 attrs[key] = value
 
             def __exit__(self, *args):
@@ -39,18 +39,18 @@ class TestOtelGenai:
         assert attrs.get("gen_ai.response.id") == "chatcmpl-123"
         assert attrs.get("gen_ai.response.finish_reasons") == ["stop"]
 
-    def test_no_op_when_otel_unavailable(self):
+    def test_no_op_when_otel_unavailable(self) -> None:
         with patch("verialign.proxy.otel_genai._otel_available", False):
             emit_genai_span(
                 {"model": "gpt-4o"},
                 {"id": "chatcmpl-123", "model": "gpt-4o", "usage": {}, "choices": []},
             )
 
-    def test_handles_missing_usage(self):
+    def test_handles_missing_usage(self) -> None:
         attrs = {}
 
         class FakeSpan:
-            def set_attribute(self, key, value):
+            def set_attribute(self, key, value) -> None:
                 attrs[key] = value
 
             def __exit__(self, *args):
@@ -71,11 +71,11 @@ class TestOtelGenai:
         assert attrs.get("gen_ai.system") == "openai"
         assert "gen_ai.usage.prompt_tokens" not in attrs
 
-    def test_handles_empty_finish_reasons(self):
+    def test_handles_empty_finish_reasons(self) -> None:
         attrs = {}
 
         class FakeSpan:
-            def set_attribute(self, key, value):
+            def set_attribute(self, key, value) -> None:
                 attrs[key] = value
 
             def __exit__(self, *args):

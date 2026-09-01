@@ -1,5 +1,5 @@
-import time
 import threading
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -37,7 +37,7 @@ class RateLimiter:
     def __init__(self, default_config: RateLimitConfig | None = None) -> None:
         self.default_config = default_config or RateLimitConfig()
         self.buckets: dict[str, tuple[TokenBucket, TokenBucket]] = defaultdict(
-            self._create_buckets
+            self._create_buckets,
         )
         self._lock = threading.Lock()
         self._valkey = None
@@ -75,7 +75,10 @@ class RateLimiter:
             return True
 
     def check_limit(
-        self, key: str, estimated_tokens: int = 1000, api_key: str | None = None
+        self,
+        key: str,
+        estimated_tokens: int = 1000,
+        api_key: str | None = None,
     ) -> tuple[bool, dict]:
         if api_key and not self._check_valkey_key(api_key):
             return False, {
@@ -113,7 +116,10 @@ class RateLimiter:
         return headers
 
     def get_headers(
-        self, key: str, estimated_tokens: int = 1000, api_key: str | None = None
+        self,
+        key: str,
+        estimated_tokens: int = 1000,
+        api_key: str | None = None,
     ) -> dict:
         allowed, info = self.check_limit(key, estimated_tokens, api_key)
         return self.build_headers(info, allowed)

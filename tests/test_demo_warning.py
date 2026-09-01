@@ -1,8 +1,9 @@
 import logging
+
 from verialign.proxy.config import get_settings
 
 
-def test_demo_mode_no_warning_when_no_keys(caplog):
+def test_demo_mode_no_warning_when_no_keys(caplog) -> None:
     """No warning should be logged when no upstream keys are set."""
     caplog.set_level(logging.WARNING)
     settings = get_settings()
@@ -11,7 +12,7 @@ def test_demo_mode_no_warning_when_no_keys(caplog):
     assert has_upstream_key is False
 
 
-def test_demo_mode_warning_condition_true_when_keys_set(caplog, monkeypatch):
+def test_demo_mode_warning_condition_true_when_keys_set(caplog, monkeypatch) -> None:
     from verialign.proxy.routing.provider_router import ProviderRouter
 
     # Only set api_key but NOT upstream_base_url — no provider becomes configured
@@ -30,7 +31,7 @@ def test_demo_mode_warning_condition_true_when_keys_set(caplog, monkeypatch):
     get_settings.cache_clear()
 
 
-def test_demo_mode_silent_when_provider_configured(caplog, monkeypatch):
+def test_demo_mode_silent_when_provider_configured(caplog, monkeypatch) -> None:
     from verialign.proxy.routing.provider_router import ProviderRouter
 
     monkeypatch.setenv("VERIALIGN_UPSTREAM_BASE_URL", "https://api.openai.com/v1")

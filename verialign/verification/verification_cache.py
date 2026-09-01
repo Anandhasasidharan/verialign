@@ -6,8 +6,10 @@ import hashlib
 import json
 import math
 import time
+from typing import TYPE_CHECKING
 
-from verialign.verification.models import VerificationResult
+if TYPE_CHECKING:
+    from verialign.verification.models import VerificationResult
 
 
 class VerificationCache:
@@ -65,7 +67,9 @@ class VerificationCache:
             best_key: str | None = None
             best_sim = 0.0
             for key, (_, stored_emb) in self._embeddings.items():
-                sim = sum(a * b for a, b in zip(emb.tolist(), stored_emb)) / (
+                sim = sum(
+                    a * b for a, b in zip(emb.tolist(), stored_emb, strict=False)
+                ) / (
                     math.sqrt(sum(a * a for a in emb.tolist()))
                     * math.sqrt(sum(b * b for b in stored_emb))
                     or 1
@@ -79,7 +83,9 @@ class VerificationCache:
         return None
 
     def get(
-        self, text: str, context: object | None = None
+        self,
+        text: str,
+        context: object | None = None,
     ) -> VerificationResult | None:
         key = self._make_key(text, context)
         entry = self._cache.get(key)
@@ -102,7 +108,10 @@ class VerificationCache:
         return None
 
     def set(
-        self, text: str, context: object | None, result: VerificationResult
+        self,
+        text: str,
+        context: object | None,
+        result: VerificationResult,
     ) -> None:
         if len(self._cache) >= self._max_size:
             self._evict()

@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
+
 from verialign.proxy.config import get_settings
 from verialign.proxy.routing.cost_model import list_model_prices, update_model_pricing
 

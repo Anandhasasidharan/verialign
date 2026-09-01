@@ -1,30 +1,32 @@
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
+
 from verialign.storage.trace_store import TraceStore, redact_sensitive_data
-from verialign.verification.models import VerificationResult, VerifiedClaim, SourceMatch
+from verialign.verification.models import SourceMatch, VerificationResult, VerifiedClaim
 
 
 class TestRedactSensitiveData:
-    def test_redact_authorization_header(self):
+    def test_redact_authorization_header(self) -> None:
         text = "Authorization: Bearer sk-1234567890abcdef"
         result = redact_sensitive_data(text)
         assert "Bearer [REDACTED]" in result
         assert "sk-1234567890abcdef" not in result
 
-    def test_redact_api_key(self):
+    def test_redact_api_key(self) -> None:
         text = 'api_key = "sk-abcdef1234567890"'
         result = redact_sensitive_data(text)
         assert "[REDACTED]" in result
         assert "sk-abcdef1234567890" not in result
 
-    def test_redact_secret(self):
+    def test_redact_secret(self) -> None:
         text = "secret: my-secret-value"
         result = redact_sensitive_data(text)
         assert "[REDACTED]" in result
         assert "my-secret-value" not in result
 
-    def test_redact_dict(self):
+    def test_redact_dict(self) -> None:
         data = {
             "headers": {"Authorization": "Bearer token123"},
             "api_key": "sk-1234567890abcdef1234567890abcdef",
@@ -35,7 +37,7 @@ class TestRedactSensitiveData:
         assert result["api_key"] == "[REDACTED]"
         assert result["normal"] == "value"
 
-    def test_redact_list(self):
+    def test_redact_list(self) -> None:
         data = [
             "Bearer token123",
             "normal",
@@ -48,15 +50,15 @@ class TestRedactSensitiveData:
 
 
 class TestTraceStore:
-    def setup_method(self):
+    def setup_method(self) -> None:
         self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".sqlite3")
         self.temp_db.close()
         self.store = TraceStore(self.temp_db.name, redact=True)
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         os.unlink(self.temp_db.name)
 
-    def test_write_and_read_trace(self):
+    def test_write_and_read_trace(self) -> None:
         verification = VerificationResult(
             claims=[
                 VerifiedClaim(
@@ -64,7 +66,7 @@ class TestTraceStore:
                     status="supported",
                     confidence=0.9,
                     sources=[SourceMatch(source_id="doc-1", score=0.8, excerpt="Test")],
-                )
+                ),
             ],
             contradictions=[],
             checklist=[],
@@ -88,7 +90,7 @@ class TestTraceStore:
         assert traces[0]["request"]["model"] == "gpt-4"
         assert traces[0]["verification"]["summary"]["total_claims"] == 1
 
-    def test_redaction_on_write(self):
+    def test_redaction_on_write(self) -> None:
         verification = VerificationResult(claims=[], contradictions=[], checklist=[])
 
         request = {
@@ -103,7 +105,7 @@ class TestTraceStore:
 
         assert traces[0]["request"]["headers"]["Authorization"] == "Bearer [REDACTED]"
 
-    def test_no_redaction_when_disabled(self):
+    def test_no_redaction_when_disabled(self) -> None:
         store_no_redact = TraceStore(self.temp_db.name, redact=False)
 
         verification = VerificationResult(claims=[], contradictions=[], checklist=[])
@@ -120,7 +122,7 @@ class TestTraceStore:
 
         assert traces[0]["request"]["headers"]["Authorization"] == "Bearer secret-token"
 
-    def test_list_recent_limit(self):
+    def test_list_recent_limit(self) -> None:
         verification = VerificationResult(claims=[], contradictions=[], checklist=[])
 
         for i in range(5):

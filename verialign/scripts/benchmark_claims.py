@@ -2,6 +2,7 @@
 
 import asyncio
 from dataclasses import dataclass
+
 from verialign.verification.claim_extractor import ClaimExtractor
 
 
@@ -144,26 +145,9 @@ async def run_benchmark() -> BenchmarkResult:
 
 
 def print_results(result: BenchmarkResult) -> None:
-    print("=" * 60)
-    print("CLAIM EXTRACTION BENCHMARK")
-    print("=" * 60)
-    print(f"Total cases:            {result.total_cases}")
-    print(f"Total expected claims:  {result.total_expected}")
-    print(f"Total extracted:        {result.extracted}")
-    print(f"True positives:         {result.true_positives}")
-    print(f"False positives:        {result.false_positives}")
-    print(f"False negatives:        {result.false_negatives}")
-    print("-" * 60)
-    print(f"Precision:              {result.precision:.3f}")
-    print(f"Recall:                 {result.recall:.3f}")
-    print(f"F1 Score:               {result.f1:.3f}")
-    print(f"Cases below min:        {result.cases_below_minimum}")
-    print("=" * 60)
 
-    if result.f1 < 0.5:
-        print("WARNING: Low F1 score. The regex-based extractor may need tuning.")
-    elif result.f1 >= 0.8:
-        print("F1 score is healthy.")
+    if result.f1 < 0.5 or result.f1 >= 0.8:
+        pass
 
 
 async def main() -> None:

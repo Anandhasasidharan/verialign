@@ -4,9 +4,8 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
-from verialign.verification.models import VerificationResult
 from verialign.proxy.config import get_settings
-
+from verialign.verification.models import VerificationResult
 
 SENSITIVE_PATTERNS = [
     (
@@ -97,7 +96,7 @@ class TraceStore:
                     "response": json.loads(row["response_json"]),
                     "verification": verification,
                     "summary": verification.get("summary", {}),
-                }
+                },
             )
         return traces
 
@@ -115,5 +114,5 @@ class TraceStore:
                     response_json text not null,
                     verification_json text not null
                 )
-                """
+                """,
             )

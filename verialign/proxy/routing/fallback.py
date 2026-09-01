@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
 from verialign.proxy.routing.provider_router import (
-    ProviderRouter,
-    ProviderResponse,
     ProviderError,
+    ProviderResponse,
+    ProviderRouter,
 )
 
 
@@ -41,7 +41,8 @@ class ProviderFallback:
         providers = self.router.get_configured_providers()
         if not providers:
             return FallbackResult(
-                response=self.router._demo_response(payload), attempts=[]
+                response=self.router._demo_response(payload),
+                attempts=[],
             )
 
         if preferred_provider:
@@ -71,8 +72,9 @@ class ProviderFallback:
                     if exc.status_code not in self.retryable_status_codes:
                         raise
 
+        msg = f"All providers failed after {len(attempts)} attempts. Last error: {last_error}"
         raise ProviderError(
-            f"All providers failed after {len(attempts)} attempts. Last error: {last_error}",
+            msg,
             status_code=last_error.status_code if last_error else 502,
         )
 

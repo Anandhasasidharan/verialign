@@ -40,7 +40,7 @@ class ResponseHandler:
             if isinstance(meta.get(key), dict):
                 return [meta.get(key)]
         if isinstance(request_payload.get("tool_calls"), list) and request_payload.get(
-            "tool_calls"
+            "tool_calls",
         ):
             return request_payload["tool_calls"]
         # Fallback: messages with role == "tool" or tool_calls inside assistant messages
@@ -56,7 +56,7 @@ class ResponseHandler:
                             "name": msg.get("name", "tool"),
                             "arguments": {},
                             "result": msg.get("content", ""),
-                        }
+                        },
                     )
                 # OpenAI tool_calls shape in assistant messages
                 if isinstance(msg.get("tool_calls"), list):
@@ -72,12 +72,14 @@ class ResponseHandler:
                                     "name": func.get("name", tc.get("name", "")),
                                     "arguments": func.get("arguments", {}),
                                     "result": tc.get("result", ""),
-                                }
+                                },
                             )
-        return tool_msgs if tool_msgs else None
+        return tool_msgs or None
 
     async def augment(
-        self, upstream_response: dict, request_payload: dict
+        self,
+        upstream_response: dict,
+        request_payload: dict,
     ) -> AugmentedResponse:
         assistant_text = self._extract_assistant_text(upstream_response)
         context = request_payload.get("metadata", {}).get("context", [])
@@ -92,7 +94,9 @@ class ResponseHandler:
         except TypeError as exc:
             if "tool_calls" in str(exc):
                 verification = await self.verifier.verify(
-                    assistant_text, context, response_data=upstream_response
+                    assistant_text,
+                    context,
+                    response_data=upstream_response,
                 )
             else:
                 raise
@@ -179,5 +183,5 @@ class ResponseHandler:
                 "message": str(error),
                 "type": type(error).__name__,
                 "status_code": status_code,
-            }
+            },
         }

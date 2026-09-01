@@ -1,8 +1,7 @@
 import pytest
 
-from verialign.verification.verification_cache import VerificationCache
 from verialign.verification.models import VerificationResult, VerifiedClaim
-
+from verialign.verification.verification_cache import VerificationCache
 
 _has_st = False
 try:
@@ -24,7 +23,7 @@ def _make_result(text: str = "test") -> VerificationResult:
                 confidence=0.9,
                 sources=[],
                 claim_id="c-0",
-            )
+            ),
         ],
         contradictions=[],
         checklist=[],
@@ -33,7 +32,7 @@ def _make_result(text: str = "test") -> VerificationResult:
 
 class TestSemanticCache:
     @semantic
-    def test_semantic_near_match_hits(self):
+    def test_semantic_near_match_hits(self) -> None:
         cache = VerificationCache(similarity_threshold=0.5)
         result = _make_result("the capital of France is Paris")
         cache.set("the capital of France is Paris", None, result)
@@ -41,14 +40,14 @@ class TestSemanticCache:
         assert cached is not None
         assert cached.claims[0].text == "the capital of France is Paris"
 
-    def test_semantic_different_queries_miss(self):
+    def test_semantic_different_queries_miss(self) -> None:
         cache = VerificationCache(similarity_threshold=0.99)
         result = _make_result("the capital of France is Paris")
         cache.set("the capital of France is Paris", None, result)
         cached = cache.get("what is the weather today")
         assert cached is None
 
-    def test_exact_match_still_works(self):
+    def test_exact_match_still_works(self) -> None:
         cache = VerificationCache()
         result = _make_result("hello world")
         cache.set("hello world", None, result)
@@ -56,7 +55,7 @@ class TestSemanticCache:
         assert cached is not None
         assert cached.claims[0].text == "hello world"
 
-    def test_context_respected_in_exact_match(self):
+    def test_context_respected_in_exact_match(self) -> None:
         cache = VerificationCache(similarity_threshold=0.99)
         result = _make_result("the capital of France is Paris")
         cache.set("the capital of France is Paris", {"id": "doc-1"}, result)
@@ -65,12 +64,12 @@ class TestSemanticCache:
         cached = cache.get("the capital of France is Paris", {"id": "doc-1"})
         assert cached is not None
 
-    def test_ttl_still_expires(self):
+    def test_ttl_still_expires(self) -> None:
         cache = VerificationCache(ttl_seconds=0)
         cache.set("test", None, _make_result("test"))
         assert cache.get("test") is None
 
-    def test_clear_empties_everything(self):
+    def test_clear_empties_everything(self) -> None:
         cache = VerificationCache()
         result = _make_result("a")
         cache.set("a", None, result)
@@ -78,7 +77,7 @@ class TestSemanticCache:
         cache.clear()
         assert cache.size == 0
 
-    def test_embedder_not_available_fallback(self):
+    def test_embedder_not_available_fallback(self) -> None:
         cache = VerificationCache()
         cache._embedder = False
         result = _make_result("test")
@@ -87,14 +86,14 @@ class TestSemanticCache:
         assert cached is None
 
     @semantic
-    def test_semantic_with_context(self):
+    def test_semantic_with_context(self) -> None:
         cache = VerificationCache(similarity_threshold=0.5)
         result = _make_result("summarize the document")
         cache.set("summarize the document", None, result)
         cached = cache.get("summarize this document")
         assert cached is not None
 
-    def test_empty_string(self):
+    def test_empty_string(self) -> None:
         cache = VerificationCache()
         assert cache.get("") is None
         cache.set("", None, _make_result(""))

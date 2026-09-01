@@ -44,7 +44,8 @@ class BaseProvider(ABC):
         pass
 
     async def chat_completions_stream(self, payload: dict) -> ProviderResponse:
-        raise NotImplementedError("streaming not supported by this provider")
+        msg = "streaming not supported by this provider"
+        raise NotImplementedError(msg)
 
     @abstractmethod
     def is_configured(self) -> bool:
@@ -87,7 +88,8 @@ class OpenAIProvider(BaseProvider):
                 provider=self.get_provider_name(),
             )
         return ProviderResponse(
-            data=response.json(), provider_name=self.get_provider_name()
+            data=response.json(),
+            provider_name=self.get_provider_name(),
         )
 
     async def chat_completions_stream(self, payload: dict) -> ProviderResponse:
@@ -120,7 +122,8 @@ class AnthropicProvider(BaseProvider):
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.base_url = os.getenv(
-            "VERIALIGN_ANTHROPIC_BASE_URL", "https://api.anthropic.com"
+            "VERIALIGN_ANTHROPIC_BASE_URL",
+            "https://api.anthropic.com",
         )
         self.api_key = os.getenv("VERIALIGN_ANTHROPIC_API_KEY")
 
@@ -157,10 +160,12 @@ class AnthropicProvider(BaseProvider):
 
         anthropic_response = response.json()
         openai_response = self._convert_from_anthropic(
-            anthropic_response, payload.get("model", "claude")
+            anthropic_response,
+            payload.get("model", "claude"),
         )
         return ProviderResponse(
-            data=openai_response, provider_name=self.get_provider_name()
+            data=openai_response,
+            provider_name=self.get_provider_name(),
         )
 
     def _convert_to_anthropic(self, payload: dict) -> dict:
@@ -195,8 +200,8 @@ class AnthropicProvider(BaseProvider):
 
                 created_at = int(
                     datetime.fromisoformat(
-                        created_at.replace("Z", "+00:00")
-                    ).timestamp()
+                        created_at.replace("Z", "+00:00"),
+                    ).timestamp(),
                 )
             except Exception:
                 created_at = 0
@@ -213,7 +218,7 @@ class AnthropicProvider(BaseProvider):
                     "index": 0,
                     "message": {"role": "assistant", "content": text},
                     "finish_reason": response.get("stop_reason", "stop"),
-                }
+                },
             ],
             "usage": {
                 "prompt_tokens": response.get("usage", {}).get("input_tokens", 0),
@@ -238,8 +243,9 @@ class LocalProvider(BaseProvider):
 
     async def chat_completions(self, payload: dict) -> ProviderResponse:
         if not self.base_url:
+            msg = "Local provider not configured"
             raise ProviderError(
-                "Local provider not configured",
+                msg,
                 status_code=503,
                 provider=self.get_provider_name(),
             )
@@ -264,13 +270,17 @@ class LocalProvider(BaseProvider):
                 provider=self.get_provider_name(),
             )
         return ProviderResponse(
-            data=response.json(), provider_name=self.get_provider_name()
+            data=response.json(),
+            provider_name=self.get_provider_name(),
         )
 
 
 class ProviderError(Exception):
     def __init__(
-        self, message: str, status_code: int = 502, provider: str = "unknown"
+        self,
+        message: str,
+        status_code: int = 502,
+        provider: str = "unknown",
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
@@ -311,11 +321,14 @@ class ProviderRouter:
         return [cb.get_status() for cb in self._circuits.values()]
 
     def select_provider(
-        self, payload: dict, preferred_provider: str | None = None
+        self,
+        payload: dict,
+        preferred_provider: str | None = None,
     ) -> BaseProvider:
         providers = self.get_configured_providers()
         if not providers:
-            raise ProviderError("No providers configured", status_code=503)
+            msg = "No providers configured"
+            raise ProviderError(msg, status_code=503)
 
         if preferred_provider:
             provider = self.get_provider(preferred_provider)
@@ -351,7 +364,9 @@ class ProviderRouter:
         return providers[0]
 
     async def chat_completions(
-        self, payload: dict, preferred_provider: str | None = None
+        self,
+        payload: dict,
+        preferred_provider: str | None = None,
     ) -> ProviderResponse:
         providers = self.get_configured_providers()
         if not providers:
@@ -361,7 +376,9 @@ class ProviderRouter:
         return await provider.chat_completions(payload)
 
     async def chat_completions_stream(
-        self, payload: dict, preferred_provider: str | None = None
+        self,
+        payload: dict,
+        preferred_provider: str | None = None,
     ):
         providers = self.get_configured_providers()
         if not providers:
@@ -401,13 +418,13 @@ class ProviderRouter:
         yield {
             **base_chunk,
             "choices": [
-                {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}
+                {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None},
             ],
         }
         yield {
             **base_chunk,
             "choices": [
-                {"index": 0, "delta": {"content": content}, "finish_reason": None}
+                {"index": 0, "delta": {"content": content}, "finish_reason": None},
             ],
         }
         yield {
@@ -443,7 +460,7 @@ class ProviderRouter:
                         "index": 0,
                         "message": {"role": "assistant", "content": content},
                         "finish_reason": "stop",
-                    }
+                    },
                 ],
                 "usage": {
                     "prompt_tokens": 0,

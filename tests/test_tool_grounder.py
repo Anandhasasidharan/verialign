@@ -1,68 +1,74 @@
 import pytest
-from verialign.verification.tool_grounder import ToolGrounder
+
 from verialign.verification.engine import VerificationEngine
+from verialign.verification.tool_grounder import ToolGrounder
 
 
-def test_tool_grounder_numeric_mismatch():
+def test_tool_grounder_numeric_mismatch() -> None:
     grounder = ToolGrounder()
     tool_calls = [
         {
             "name": "process_refund",
             "arguments": {"amount": 45},
             "result": {"status": "processed", "amount": 45},
-        }
+        },
     ]
-    status, conf, reason = grounder.ground(
-        "the refund was processed for $50", tool_calls
+    status, conf, _reason = grounder.ground(
+        "the refund was processed for $50",
+        tool_calls,
     )
     assert status == "unsupported"
     assert conf >= 0.7
 
 
-def test_tool_grounder_no_mismatch():
+def test_tool_grounder_no_mismatch() -> None:
     grounder = ToolGrounder()
     tool_calls = [
         {
             "name": "process_refund",
             "arguments": {"amount": 45},
             "result": {"status": "processed", "amount": 45},
-        }
+        },
     ]
-    status, conf, reason = grounder.ground(
-        "the refund was processed for $45", tool_calls
+    status, _conf, _reason = grounder.ground(
+        "the refund was processed for $45",
+        tool_calls,
     )
     # No contradiction when amounts match — should return None
     assert status is None
 
 
-def test_tool_grounder_non_tool_claim():
+def test_tool_grounder_non_tool_claim() -> None:
     grounder = ToolGrounder()
     tool_calls = [
         {
             "name": "process_refund",
             "arguments": {"amount": 45},
             "result": {"status": "processed", "amount": 45},
-        }
+        },
     ]
-    status, conf, reason = grounder.ground(
-        "Paris is the capital of France.", tool_calls
+    status, _conf, _reason = grounder.ground(
+        "Paris is the capital of France.",
+        tool_calls,
     )
     assert status is None
 
 
 @pytest.mark.asyncio
-async def test_engine_tool_grounding_integration():
+async def test_engine_tool_grounding_integration() -> None:
     engine = VerificationEngine()
     tool_calls = [
         {
             "name": "process_refund",
             "arguments": {"amount": 45},
             "result": {"status": "processed", "amount": 45},
-        }
+        },
     ]
     # Claim says $50 but tool says 45 -> unsupported
     result = await engine.verify(
-        "the refund was processed for $50", context=[], tool_calls=tool_calls
+        "the refund was processed for $50",
+        context=[],
+        tool_calls=tool_calls,
     )
     assert len(result.claims) == 1
     assert result.claims[0].status == "unsupported"
@@ -70,7 +76,7 @@ async def test_engine_tool_grounding_integration():
 
 
 @pytest.mark.asyncio
-async def test_response_handler_extracts_tool_calls_from_metadata():
+async def test_response_handler_extracts_tool_calls_from_metadata() -> None:
     from verialign.proxy.middleware.response_handler import ResponseHandler
 
     # Use real engine so tool grounding applies
@@ -82,8 +88,8 @@ async def test_response_handler_extracts_tool_calls_from_metadata():
                 "message": {
                     "role": "assistant",
                     "content": "refund was processed for $50",
-                }
-            }
+                },
+            },
         ],
     }
     request = {
@@ -94,7 +100,7 @@ async def test_response_handler_extracts_tool_calls_from_metadata():
                     "name": "process_refund",
                     "arguments": {"amount": 45},
                     "result": {"status": "processed", "amount": 45},
-                }
+                },
             ],
         },
         "messages": [],
@@ -105,7 +111,7 @@ async def test_response_handler_extracts_tool_calls_from_metadata():
 
 
 @pytest.mark.asyncio
-async def test_response_handler_extracts_tool_calls_from_messages():
+async def test_response_handler_extracts_tool_calls_from_messages() -> None:
     from verialign.proxy.middleware.response_handler import ResponseHandler
 
     handler = ResponseHandler(policy="pass-through")
@@ -116,8 +122,8 @@ async def test_response_handler_extracts_tool_calls_from_messages():
                 "message": {
                     "role": "assistant",
                     "content": "refund was processed for $50",
-                }
-            }
+                },
+            },
         ],
     }
     request = {

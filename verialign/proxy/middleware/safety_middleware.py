@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
-import re
 import logging
+import re
+from typing import TYPE_CHECKING
+
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +23,18 @@ PII_PATTERNS: dict[str, re.Pattern] = {
 }
 
 JAILBREAK_PATTERNS: list[re.Pattern] = [
-    re.compile(r"ignore\s+(all\s+)?(prior|previous|above)\s+instructions", re.I),
-    re.compile(r"you\s+are\s+(now|free|not\s+bound)", re.I),
-    re.compile(r"system\s+prompt", re.I),
-    re.compile(r"act\s+as\s+(dan|jailbroken|unfiltered)", re.I),
     re.compile(
-        r"do\s+(not\s+)?have\s+(any\s+)?(restrictions|limitations|guidelines)", re.I
+        r"ignore\s+(all\s+)?(prior|previous|above)\s+instructions", re.IGNORECASE
     ),
-    re.compile(r"output\s+raw\s+(text|data|json)", re.I),
-    re.compile(r"bypass\s+(safety|filter|guardrail)", re.I),
+    re.compile(r"you\s+are\s+(now|free|not\s+bound)", re.IGNORECASE),
+    re.compile(r"system\s+prompt", re.IGNORECASE),
+    re.compile(r"act\s+as\s+(dan|jailbroken|unfiltered)", re.IGNORECASE),
+    re.compile(
+        r"do\s+(not\s+)?have\s+(any\s+)?(restrictions|limitations|guidelines)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"output\s+raw\s+(text|data|json)", re.IGNORECASE),
+    re.compile(r"bypass\s+(safety|filter|guardrail)", re.IGNORECASE),
 ]
 
 TOXIC_KEYWORDS: list[str] = [
@@ -38,7 +45,8 @@ TOXIC_KEYWORDS: list[str] = [
 ]
 
 _TOXIC_WORD_RE = re.compile(
-    "|".join(r"\b" + re.escape(kw) + r"\b" for kw in TOXIC_KEYWORDS), re.I
+    "|".join(r"\b" + re.escape(kw) + r"\b" for kw in TOXIC_KEYWORDS),
+    re.IGNORECASE,
 )
 
 
@@ -86,7 +94,9 @@ class SafetyMiddleware(BaseHTTPMiddleware):
         self.toxicity_score = toxicity_score
 
     async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
+        self,
+        request: Request,
+        call_next: RequestResponseEndpoint,
     ) -> Response:
         block = self.jailbreak_block or self.toxicity_block
         if block:
@@ -109,7 +119,7 @@ class SafetyMiddleware(BaseHTTPMiddleware):
                                         ),
                                         "type": "safety",
                                         "status_code": 403,
-                                    }
+                                    },
                                 },
                             )
                 if self.toxicity_block:
@@ -131,7 +141,7 @@ class SafetyMiddleware(BaseHTTPMiddleware):
                                     ),
                                     "type": "safety",
                                     "status_code": 403,
-                                }
+                                },
                             },
                         )
 
@@ -154,7 +164,8 @@ class SafetyMiddleware(BaseHTTPMiddleware):
                             redacted = _redact_credit_cards(redacted)
                         else:
                             redacted = pattern.sub(
-                                f"[REDACTED_{name.upper()}]", redacted
+                                f"[REDACTED_{name.upper()}]",
+                                redacted,
                             )
                     if redacted != text:
                         logger.info("pii_redacted", extra={"path": str(request.url)})

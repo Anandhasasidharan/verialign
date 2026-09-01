@@ -1,4 +1,5 @@
 import logging
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -25,7 +26,7 @@ class RequestBodySizeLimitMiddleware(BaseHTTPMiddleware):
                         "message": f"Request too large: max {self.max_size} bytes",
                         "type": "request_too_large",
                         "status_code": 413,
-                    }
+                    },
                 },
             )
         return await call_next(request)

@@ -1,9 +1,9 @@
+import contextvars
+import json
 import logging
 import uuid
-import json
 from datetime import datetime, timezone
 
-import contextvars
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
@@ -34,7 +34,8 @@ RESERVED_ATTRS = {
 }
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "request_id", default=""
+    "request_id",
+    default="",
 )
 
 

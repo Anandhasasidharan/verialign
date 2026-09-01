@@ -2,8 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from verialign.proxy.config import get_settings
-from verialign.proxy.routing.cost_model import MODEL_PRICING
 from verialign.proxy.main import app
+from verialign.proxy.routing.cost_model import MODEL_PRICING
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def _headers() -> dict:
     return {"X-Admin-Key": "test-admin-key"}
 
 
-def test_admin_disabled_without_key(monkeypatch):
+def test_admin_disabled_without_key(monkeypatch) -> None:
     monkeypatch.delenv("VERIALIGN_ADMIN_API_KEY", raising=False)
     get_settings.cache_clear()
     client = TestClient(app)
@@ -25,7 +25,7 @@ def test_admin_disabled_without_key(monkeypatch):
     assert response.status_code == 503
 
 
-def test_admin_wrong_key_returns_403(monkeypatch):
+def test_admin_wrong_key_returns_403(monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "real-key")
     get_settings.cache_clear()
     client = TestClient(app)
@@ -33,7 +33,7 @@ def test_admin_wrong_key_returns_403(monkeypatch):
     assert response.status_code == 403
 
 
-def test_admin_valid_key_succeeds(monkeypatch):
+def test_admin_valid_key_succeeds(monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "real-key")
     get_settings.cache_clear()
     client = TestClient(app)
@@ -41,7 +41,7 @@ def test_admin_valid_key_succeeds(monkeypatch):
     assert response.status_code == 200
 
 
-def test_admin_pricing_put(monkeypatch):
+def test_admin_pricing_put(monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "test-admin-key")
     get_settings.cache_clear()
     client = TestClient(app)
@@ -56,7 +56,7 @@ def test_admin_pricing_put(monkeypatch):
     assert get_response.json()["models"]["gpt-5"] == {"input": 5.0, "output": 20.0}
 
 
-def test_admin_pricing_put_requires_auth(monkeypatch):
+def test_admin_pricing_put_requires_auth(monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_ADMIN_API_KEY", "test-admin-key")
     get_settings.cache_clear()
     client = TestClient(app)

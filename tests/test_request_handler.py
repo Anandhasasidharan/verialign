@@ -1,13 +1,14 @@
 import pytest
+
 from verialign.proxy.middleware.request_handler import (
-    validate_request,
-    build_upstream_payload,
     ValidatedRequest,
+    build_upstream_payload,
+    validate_request,
 )
 
 
 class TestRequestHandler:
-    def test_validate_request_valid(self):
+    def test_validate_request_valid(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -21,22 +22,22 @@ class TestRequestHandler:
         assert validated.max_tokens == 100
         assert validated.stream is False
 
-    def test_validate_request_missing_model(self):
+    def test_validate_request_missing_model(self) -> None:
         payload = {"messages": [{"role": "user", "content": "Hello"}]}
         with pytest.raises(ValueError, match="model is required"):
             validate_request(payload)
 
-    def test_validate_request_empty_messages(self):
+    def test_validate_request_empty_messages(self) -> None:
         payload = {"model": "gpt-4", "messages": []}
         with pytest.raises(ValueError, match="messages must be a non-empty list"):
             validate_request(payload)
 
-    def test_validate_request_invalid_message_format(self):
+    def test_validate_request_invalid_message_format(self) -> None:
         payload = {"model": "gpt-4", "messages": [{"role": "user"}]}
         with pytest.raises(ValueError, match="each message must have role and content"):
             validate_request(payload)
 
-    def test_validate_request_stream_true_accepted(self):
+    def test_validate_request_stream_true_accepted(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -45,18 +46,19 @@ class TestRequestHandler:
         validated = validate_request(payload)
         assert validated.stream is True
 
-    def test_validate_request_temperature_out_of_range(self):
+    def test_validate_request_temperature_out_of_range(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
             "temperature": 3.0,
         }
         with pytest.raises(
-            ValueError, match="temperature must be a number between 0 and 2"
+            ValueError,
+            match="temperature must be a number between 0 and 2",
         ):
             validate_request(payload)
 
-    def test_validate_request_max_tokens_invalid(self):
+    def test_validate_request_max_tokens_invalid(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -65,7 +67,7 @@ class TestRequestHandler:
         with pytest.raises(ValueError, match="max_tokens must be a positive integer"):
             validate_request(payload)
 
-    def test_validate_request_top_p_out_of_range(self):
+    def test_validate_request_top_p_out_of_range(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -74,7 +76,7 @@ class TestRequestHandler:
         with pytest.raises(ValueError, match="top_p must be a number between 0 and 1"):
             validate_request(payload)
 
-    def test_validate_request_tools_not_list(self):
+    def test_validate_request_tools_not_list(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -83,18 +85,19 @@ class TestRequestHandler:
         with pytest.raises(ValueError, match="tools must be a list"):
             validate_request(payload)
 
-    def test_validate_request_tool_choice_invalid(self):
+    def test_validate_request_tool_choice_invalid(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
             "tool_choice": 123,
         }
         with pytest.raises(
-            ValueError, match="tool_choice must be a string, object, or null"
+            ValueError,
+            match="tool_choice must be a string, object, or null",
         ):
             validate_request(payload)
 
-    def test_validate_request_response_format_not_dict(self):
+    def test_validate_request_response_format_not_dict(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -103,7 +106,7 @@ class TestRequestHandler:
         with pytest.raises(ValueError, match="response_format must be an object"):
             validate_request(payload)
 
-    def test_validate_request_metadata_not_dict(self):
+    def test_validate_request_metadata_not_dict(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -112,7 +115,7 @@ class TestRequestHandler:
         with pytest.raises(ValueError, match="metadata must be an object"):
             validate_request(payload)
 
-    def test_validate_request_extra_fields_preserved(self):
+    def test_validate_request_extra_fields_preserved(self) -> None:
         payload = {
             "model": "gpt-4",
             "messages": [{"role": "user", "content": "Hello"}],
@@ -121,7 +124,7 @@ class TestRequestHandler:
         validated = validate_request(payload)
         assert validated.extra_fields == {"custom_field": "custom_value"}
 
-    def test_build_upstream_payload_includes_optional(self):
+    def test_build_upstream_payload_includes_optional(self) -> None:
         validated = ValidatedRequest(
             model="gpt-4",
             messages=[{"role": "user", "content": "Hello"}],
@@ -145,7 +148,7 @@ class TestRequestHandler:
         assert payload["response_format"] == {"type": "json_object"}
         assert payload["custom"] == "value"
 
-    def test_build_upstream_payload_excludes_none(self):
+    def test_build_upstream_payload_excludes_none(self) -> None:
         validated = ValidatedRequest(
             model="gpt-4",
             messages=[{"role": "user", "content": "Hello"}],

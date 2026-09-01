@@ -47,7 +47,8 @@ def emit_genai_span(
             span.set_attribute("gen_ai.usage.completion_tokens", completion_tokens)
         if prompt_tokens or completion_tokens:
             span.set_attribute(
-                "gen_ai.usage.total_tokens", prompt_tokens + completion_tokens
+                "gen_ai.usage.total_tokens",
+                prompt_tokens + completion_tokens,
             )
 
         response_id = response_payload.get("id", "")

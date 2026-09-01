@@ -24,7 +24,7 @@ class NLIGrounder:
 
             self._tokenizer = AutoTokenizer.from_pretrained(self._model_name)
             self._model = AutoModelForSequenceClassification.from_pretrained(
-                self._model_name
+                self._model_name,
             )
             if torch.cuda.is_available():
                 self._device = "cuda"
@@ -65,7 +65,7 @@ class NLIGrounder:
                 probs = torch.nn.functional.softmax(outputs.logits, dim=1)
 
             results = []
-            for i, chunk in enumerate(context_chunks):
+            for i, _chunk in enumerate(context_chunks):
                 prob = probs[i]
                 results.append(
                     {
@@ -73,7 +73,7 @@ class NLIGrounder:
                         "entailment": round(prob[0].item(), 4),
                         "neutral": round(prob[1].item(), 4),
                         "contradiction": round(prob[2].item(), 4),
-                    }
+                    },
                 )
             return results
         except Exception:
@@ -81,7 +81,10 @@ class NLIGrounder:
             return []
 
     async def ground(
-        self, claim: str, context_chunks: list[str], threshold: float | None = None
+        self,
+        claim: str,
+        context_chunks: list[str],
+        threshold: float | None = None,
     ) -> tuple[str, float, list[dict]]:
         scores = await self.score(claim, context_chunks)
         if not scores:

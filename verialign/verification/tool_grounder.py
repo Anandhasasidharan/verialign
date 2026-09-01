@@ -1,9 +1,10 @@
-import re
 import json
+import re
 
 _NUMBER = re.compile(r"\$?\s*(\d+(?:,\d{3})*(?:\.\d+)?)")
 _TOOL_HINT = re.compile(
-    r"\b(refund|payment|transfer|order|amount|processed|tool)\b", re.IGNORECASE
+    r"\b(refund|payment|transfer|order|amount|processed|tool)\b",
+    re.IGNORECASE,
 )
 
 
@@ -40,12 +41,14 @@ class ToolGrounder:
                     name = item["function"].get("name", "")
                     args = item["function"].get("arguments", args)
                 normalized.append(
-                    {"name": str(name), "arguments": args, "result": result}
+                    {"name": str(name), "arguments": args, "result": result},
                 )
         return normalized
 
     def ground(
-        self, claim: str, tool_calls: list[dict]
+        self,
+        claim: str,
+        tool_calls: list[dict],
     ) -> tuple[str | None, float, str | None]:
         """Returns (status, confidence, reason) if tool grounding applies, else (None, 0, None)."""
         if not tool_calls:
@@ -53,7 +56,7 @@ class ToolGrounder:
 
         # Only apply if claim looks tool-relevant (mentions tool-ish words or dollar amounts)
         claim_has_hint = bool(
-            _TOOL_HINT.search(claim) or "$" in claim or _NUMBER.search(claim)
+            _TOOL_HINT.search(claim) or "$" in claim or _NUMBER.search(claim),
         )
         if not claim_has_hint:
             return None, 0.0, None
@@ -127,10 +130,7 @@ class ToolGrounder:
                 if "." in raw:
                     v = float(raw)
                     # keep as int string if integer
-                    if v.is_integer():
-                        raw = str(int(v))
-                    else:
-                        raw = str(v)
+                    raw = str(int(v)) if v.is_integer() else str(v)
                 else:
                     raw = str(int(float(raw)))
             except Exception:
