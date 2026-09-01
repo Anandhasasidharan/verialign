@@ -1,0 +1,52 @@
+# Caddyfile — TLS termination for VeriAlign prod
+# Set VERIALIGN_DOMAIN in env or replace your.domain
+
+{$VERIALIGN_DOMAIN:your.domain} {
+    encode gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Proxy API — rate-limited, audited, PII-redacted
+    handle /v1/* {
+        reverse_proxy proxy:8000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    handle /metrics* {
+        @admin not remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+        respond @admin "metrics restricted" 403
+        reverse_proxy proxy:8000
+    }
+    handle /health* {
+        reverse_proxy proxy:8000
+    }
+    handle /traces* {
+        reverse_proxy proxy:8000
+    }
+    handle /admin/* {
+        reverse_proxy proxy:8000
+    }
+
+    # Dashboard on sub-path (VPN/allowlist in prod)
+    handle /dashboard/* {
+        uri strip_prefix /dashboard
+        reverse_proxy dashboard:8501
+    }
+
+    handle {
+        respond "VeriAlign inline verification proxy — use /v1/chat/completions" 200
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}

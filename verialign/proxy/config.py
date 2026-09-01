@@ -80,12 +80,19 @@ class Settings(BaseSettings):
     alert_slack_webhook_url: str | None = Field(
         default=None, alias="VERIALIGN_ALERT_SLACK_WEBHOOK_URL"
     )
+    response_policy: str = Field(
+        default="pass-through", alias="VERIALIGN_RESPONSE_POLICY"
+    )
+    block_threshold: float = Field(
+        default=0.5, alias="VERIALIGN_BLOCK_THRESHOLD"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         populate_by_name=True,
         extra="ignore",
+        env_ignore_empty=True,
     )
 
 

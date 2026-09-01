@@ -1,7 +1,7 @@
 # VeriAlign — Verification Support Proxy for LLM Outputs
 
 > **Domain:** Alignment  
-> **Source Paper:** arXiv:2605.04454 (May 2026)  
+> **Source Paper:** arXiv:2605.04454 — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone* (Vishwarupe, Shadbolt, Jirotka, Flechais — Oxford, May 2026)  
 > **Build Time:** 4 weeks  
 > **GPU:** None required  
 > **Stack:** Python, FastAPI, SQLite, Streamlit, Docker
@@ -12,11 +12,9 @@
 
 A **reverse proxy** that sits between any application and any LLM API. It intercepts every request, forwards it to the model, then augments the response with verification information before returning it to the user.
 
-The paper **arXiv:2605.04454** audited 11 alignment benchmarks and found:
+The paper **arXiv:2605.04454** (*Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone*, Vishwarupe et al., Oxford, May 2026) audited 11 alignment benchmarks and found user-facing verification support absent across the set. The authors argue the gap cannot be closed at the model level alone and requires infrastructure-level scaffolding.
 
-> *"User-facing verification support — mechanisms that help a user check what the model has produced — is absent across every benchmark examined."*
-
-> *"The gap the audit identifies cannot be closed at the model level — a verification scaffold lifts one model to ceiling while leaving another categorically unchanged."*
+> Short anchor (<15 words): *"verification support was absent"* — paraphrase of the audit finding.
 
 This project fills that gap at the **infrastructure level** — a tool that works with any model, any provider.
 
@@ -174,7 +172,7 @@ verialign/
 | 1 | README: problem, architecture diagram (ASCII), quick start | `README.md` |
 | 2 | Architecture doc: detailed component explanation | `docs/architecture.md` |
 | 3 | Deployment doc: Docker, fly.io, Railway, env vars | `docs/deployment.md` |
-| 4 | Paper summary: arXiv:2605.04454 key findings in your own words | `docs/paper-summary.md` |
+| 4 | Paper summary: arXiv:2605.04454 (*Deployment-Relevant Alignment...*) | `docs/paper-summary.md` |
 | 5 | Interview pitch: write out the 30-second answer, practice it | `docs/interview-pitch.md` |
 | 6 | Benchmark script: measure median + p99 latency overhead | `scripts/benchmark.py` |
 | 7 | Final integration test + README screenshots of dashboard | — |
@@ -210,6 +208,6 @@ verialign/
 
 | Source | URL | What It Provides |
 |--------|-----|------------------|
-| arXiv:2605.04454 | https://arxiv.org/abs/2605.04454 | The gap: verification support absent from all benchmarks |
+| arXiv:2605.04454 — Vishwarupe et al., Oxford | https://arxiv.org/abs/2605.04454 | The gap: deployment-relevant verification support absent; requires infrastructure scaffolding |
 | Anthropic Engineering Blog | https://www.anthropic.com/engineering | Proxy/containment architecture patterns (inspiration) |
 | Bifrost AI Gateway | https://github.com/maximhq/bifrost | Reference for production AI gateway architecture |

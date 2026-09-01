@@ -67,12 +67,17 @@ class VerifiedClaim:
         }
 
 
+SCAFFOLD_VERSION = "verialign@0.1.0+nli-deberta-v3-base+rescoring"
+
+
 @dataclass(frozen=True)
 class VerificationResult:
     claims: list[VerifiedClaim]
     contradictions: list[Contradiction]
     checklist: list[ChecklistItem]
     cost: float | None = None
+    trust_score: float | None = None
+    scaffold: str = SCAFFOLD_VERSION
 
     @property
     def summary(self) -> dict:
@@ -91,7 +96,19 @@ class VerificationResult:
         }
         if self.cost is not None:
             d["cost"] = self.cost
+        if self.trust_score is not None:
+            d["trust_score"] = self.trust_score
         return d
+
+    @property
+    def profile(self) -> dict:
+        """System-level alignment profile (2605.04454: profiles not single scores)."""
+        return {
+            "scaffold": self.scaffold,
+            "summary": self.summary,
+            "trust_score": self.trust_score,
+            "inferential_distance": "model-level unverified -> deployment-verified via scaffold; human checklist required for low-trust claims",
+        }
 
     def to_dict(self) -> dict:
         d: dict = {
@@ -99,7 +116,10 @@ class VerificationResult:
             "contradictions": [c.to_dict() for c in self.contradictions],
             "checklist": [item.to_dict() for item in self.checklist],
             "summary": self.summary,
+            "profile": self.profile,
         }
         if self.cost is not None:
             d["cost"] = self.cost
+        if self.trust_score is not None:
+            d["trust_score"] = self.trust_score
         return d

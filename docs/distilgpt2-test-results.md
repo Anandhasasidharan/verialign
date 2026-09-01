@@ -3,8 +3,10 @@
 **Date:** 2026-06-07  
 **Model:** `distilgpt2` (82M params, distilled GPT-2)  
 **Pipeline:** LLM-as-judge claim extraction via `VerificationEngine`  
-**Test file:** `tests/test_distilgpt2_llm_judge.py`  
+**Test file:** `tests/test_distilgpt2_llm_judge.py` — *ad-hoc validation script, not persisted in the repo* (requires system-level `transformers`/`torch`; see `scripts/` for persisted benchmarks).  
 **Runner:** `PYTHONPATH=~/.local/lib/python3.12/site-packages .venv/bin/python` — uses system `transformers==5.10.2` + `torch==2.12.0` (not installed in venv)
+
+> **Note:** This result doc captures an ad-hoc manual validation of the LLM-as-judge integration path with `distilgpt2`. It was not committed as a persistent test (`tests/test_distilgpt2_llm_judge.py` does not exist in the repo) because it requires a system-level `torch`/`transformers` install and is non-deterministic. For persisted verification benchmarks, see `scripts/benchmark_verification.py` and `scripts/benchmark_claims.py`.
 
 ---
 

@@ -1,14 +1,21 @@
 # Paper Summary: arXiv:2605.04454
 
 ## Title
-**"Alignment Benchmarks Fail to Capture User-Facing Verification Support"**
+**"Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone"**
+Vishwarupe, Shadbolt, Jirotka, Flechais — Oxford, May 2026
 
 ## Key Finding
-The paper audited 11 major alignment benchmarks and found that **none** include user-facing verification support — mechanisms that help users check what the model has produced.
+The authors audited 11 major alignment benchmarks and found that mechanisms for
+user-facing verification were absent across the set. In the authors' framing,
+benchmarks evaluate models in isolation and do not measure whether a deployed
+user can check the output.
 
-> *"User-facing verification support — mechanisms that help a user check what the model has produced — is absent across every benchmark examined."*
+Paraphrased: the gap is structural — model-level scores do not predict whether
+a user can verify a response in a deployment context. The paper argues this
+cannot be closed by model improvements alone and requires infrastructure-level
+scaffolding.
 
-> *"The gap the audit identifies cannot be closed at the model level — a verification scaffold lifts one model to ceiling while leaving another categorically unchanged."*
+Short verbatim anchor (under 15 words): *"verification support was absent"* across the benchmarks audited.
 
 ## The Core Problem
 
@@ -19,14 +26,14 @@ Current alignment benchmarks measure:
 - Instruction following
 - Reasoning capability
 
-But they **don't measure** whether users can actually verify the model's outputs.
+But they **don't measure** whether users can actually verify the model's outputs in deployment.
 
 ## Why This Matters
 
 1. **Models hallucinate** — even aligned ones
-2. **Users can't distinguish** confident hallucinations from truth
-3. **Verification is an infrastructure problem**, not a model problem
-4. **A proxy layer** can provide verification for ANY model
+2. **Users can't distinguish** confident hallucinations from truth without tooling
+3. **Verification is an infrastructure problem**, not solely a model problem
+4. **A proxy layer** can provide verification for any model
 
 ## VeriAlign's Approach
 
@@ -43,28 +50,23 @@ VeriAlign implements the paper's implied solution: **infrastructure-level verifi
 
 ## Benchmarks Audited (11 total)
 
-1. **TruthfulQA** — Truthfulness, but no verification tools
-2. **Halueval** — Hallucination detection, not user-facing
-3. **FactScore** — Atomic fact scoring, no user interface
-4. **SelfCheckGPT** — Self-consistency, not external grounding
-5. **RAG benchmarks** — Retrieval quality, not claim verification
-6. **And 5 more...**
+The paper lists 11 benchmarks (including TruthfulQA, HaluEval, FactScore, SelfCheckGPT, and RAG-focused suites). The common pattern identified is that all evaluate model outputs, but none provide user-facing verification support as defined above.
 
-**Common pattern**: All evaluate model outputs, none provide user-facing verification support.
+*For full methodology, see the PDF at https://arxiv.org/abs/2605.04454 — this summary is paraphrased; only the short anchor above is verbatim.*
 
 ## Implications
 
-1. **Verification must be external** — can't rely on model self-assessment
+1. **Verification must be external** — can't rely on model self-assessment alone
 2. **Works with any model** — proxy architecture is model-agnostic
 3. **Infrastructure investment** — verification layer is reusable across models
-4. **Measurable** — can benchmark verification quality independently
+4. **Measurable** — verification quality can be benchmarked independently with calibration
 
 ## VeriAlign's Contribution
 
-VeriAlign demonstrates that the verification gap identified in the paper **can be closed at the infrastructure level** with:
+VeriAlign demonstrates that the verification gap identified in the paper **can be addressed at the infrastructure level** with:
 - OpenAI-compatible proxy (drop-in replacement)
 - Real-time claim extraction and grounding
 - Contradiction detection
-- Confidence scoring
+- Confidence scoring with calibration reporting
 - Persistent traces for audit/review
 - Dashboard for human-in-the-loop verification

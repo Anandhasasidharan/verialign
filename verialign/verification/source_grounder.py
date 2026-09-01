@@ -125,8 +125,10 @@ class SourceGrounder:
         use_nli: bool = True,
         web_api_key: str | None = None,
         web_provider: str = "tavily",
+        use_rescoring: bool = False,
     ) -> None:
         self.use_semantic = use_semantic
+        self.use_rescoring = use_rescoring
         self._embedding_matcher: EmbeddingMatcher | None = None
         self._tfidf_matcher: TFIDFMatcher | None = None
         self._web_grounder: WebGrounder | None = None
@@ -168,6 +170,15 @@ class SourceGrounder:
             if nli_status == "unsupported" and nli_score > 0.5:
                 return "unsupported", nli_score, matches[:3] if matches else []
             if nli_status == "supported" and nli_score > 0.5:
+                if self.use_rescoring:
+                    # Claim-conditioned re-scoring: re-score specific evidence span
+                    # against full claim to close the warrant gap (SIFT, June 2026).
+                    # NLI can be confident on sentence-level entailment while the
+                    # evidence does not license the claim. We re-score using the
+                    # evidence span that triggered NLI and downgrade if warrant is weak.
+                    warrant_score = self._warrant_score(claim, context)
+                    if warrant_score < 0.35:
+                        return "unclear", nli_score * warrant_score, matches[:3] if matches else []
                 return "supported", nli_score, matches[:3] if matches else []
 
         if not matches and self._web_grounder and self._web_grounder.is_available():
@@ -254,6 +265,23 @@ class SourceGrounder:
                 if isinstance(text, str):
                     normalized.append((str(item.get("id", f"context-{index}")), text))
         return normalized
+
+    def _warrant_score(self, claim: str, context: list[tuple[str, str]]) -> float:
+        """Claim-conditioned warrant score: max evidence-span overlap vs full claim."""
+        claim_terms = self._terms(claim)
+        if not claim_terms:
+            return 0.0
+        context_texts = [c[1] for c in context]
+        sem_scores = self._compute_semantic_scores(claim, context_texts) if self.use_semantic and context_texts else [0.0] * len(context_texts)
+        best = 0.0
+        for i, (_, text) in enumerate(context):
+            source_terms = self._terms(text)
+            kw = len(claim_terms & source_terms) / len(claim_terms) if claim_terms else 0.0
+            sem = sem_scores[i] if i < len(sem_scores) else 0.0
+            combined = kw * 0.4 + sem * 0.6 if sem > 0 else kw
+            if combined > best:
+                best = combined
+        return best
 
     def _terms(self, text: str) -> set[str]:
         return {

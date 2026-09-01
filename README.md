@@ -1,12 +1,14 @@
 # VeriAlign — Verification Support Proxy for LLM Outputs
 
 > **Domain:** Alignment  
-> **Source Paper:** arXiv:2605.04454 (May 2026)  
+> **Source Paper:** arXiv:2605.04454 — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone* (Vishwarupe, Shadbolt, Jirotka, Flechais — Oxford, May 2026)  
 > **Stack:** Python 3.12, FastAPI, SQLite/Postgres, Ruff, Docker, optional: Valkey, Sentry, OpenTelemetry
 
-A **reverse proxy** that sits between any application and any LLM API. It intercepts every request, forwards it to the model, then augments the response with verification information before returning it to the user.
+**One-command self-host:** `docker compose -f verialign/deploy/docker-compose.yml up -d` — a small, self-hostable **inline-verification** layer you can read end-to-end in an afternoon and run in one container. No sales call, no separate eval platform to cross-reference.
 
-The paper **arXiv:2605.04454** audited 11 alignment benchmarks and found verification support absent from every one. VeriAlign fills that gap at the **infrastructure level**.
+A **reverse proxy** that sits between any application and any LLM API. It intercepts every request, forwards it to the model, then returns the original response **with an inline `verification` object** (claims, grounding, contradictions, confidence, trust score, checklist) — the headline feature every competitor buries in a side dashboard.
+
+Oxford's May 2026 audit (arXiv:2605.04454) found 11 alignment benchmarks provided no user-facing verification support. VeriAlign fills that deployment-relevant gap at the **infrastructure level**.
 
 ### NLI Hallucination Detection
 
@@ -147,7 +149,7 @@ Every response includes a `verification` object:
 | **Safety middleware** | PII redaction (email/phone/SSN/credit card), jailbreak detection, toxicity filtering |
 | **Trace persistence** | SQLite (sync) or Postgres (async) storage with sensitive data redaction |
 | **Admin API** | Read-only `/admin/*` endpoints: config, providers, traces, pricing |
-| **Metrics** | Prometheus `/_metrics` endpoint |
+| **Metrics** | Prometheus `/metrics` endpoint |
 | **Valkey cache** | Distributed cache drop-in when `VERIALIGN_VALKEY_URL` is set |
 | **Streaming** | SSE passthrough with post-stream verification and trace storage |
 | **Structured output** | Detects `response_format: {type: "json_object"}` |
@@ -205,7 +207,7 @@ verialign/
 │   │   │   ├── request_handler.py        # Validate incoming requests
 │   │   │   ├── response_handler.py       # Augment responses with verification
 │   │   │   ├── safety.py                 # PII redaction, jailbreak, toxicity
-│   │   │   ├── metrics.py                # Prometheus /_metrics
+│   │   │   ├── metrics.py                # Prometheus /metrics
 │   │   │   ├── logging_middleware.py     # Structured JSON logging
 │   │   │   ├── body_size_limit.py        # Request body size guard
 │   │   │   └── request_timeout.py        # Request timeout guard
@@ -283,7 +285,7 @@ verialign/
 | GET | `/health/deep` | Deep health check (DB, config) |
 | POST | `/v1/chat/completions` | Chat completion with verification |
 | GET | `/traces?limit=25` | List recent traces |
-| GET | `/_metrics` | Prometheus metrics |
+| GET | `/metrics` | Prometheus metrics |
 | GET | `/admin/config` | Runtime config (admin key required) |
 | GET | `/admin/providers` | Configured providers (admin key required) |
 | GET | `/admin/traces` | All traces (admin key required) |
@@ -292,18 +294,22 @@ verialign/
 ## Deployment
 
 ```bash
-# Docker Compose (full stack)
-docker compose -f deploy/docker-compose.yml up -d
+# Demo (SQLite, one container)
+docker compose -f verialign/deploy/docker-compose.yml up -d
 
-# Fly.io
-flyctl launch
-flyctl deploy
+# Production (Postgres+Valkey+Caddy TLS, 4 workers, healthchecks)
+# 1) cp .env.example .env && set VERIALIGN_PROXY_API_KEY, ADMIN_API_KEY, POSTGRES_PASSWORD, DOMAIN
+# 2) docker compose -f verialign/deploy/docker-compose.prod.yml up -d
+#    -> Caddy auto-TLS to https://your.domain, proxy + dashboard behind it
+#    -> alembic upgrade head runs on start, /health and /metrics behind allowlist
 
-# Railway
-railway up
+# Fly.io / Railway
+flyctl launch && flyctl deploy  # or railway up
 ```
 
-See `docs/deployment.md` for detailed instructions.
+See `docs/deployment.md` for systemd, Caddyfile, and prod env checklist.
+
+**Prod env checklist:** `VERIALIGN_DATABASE_URL` (or `POSTGRES_PASSWORD` for compose), `VERIALIGN_VALKEY_URL`, `VERIALIGN_REQUIRE_PROXY_AUTH=true`, `VERIALIGN_CORS_ALLOWED_ORIGINS=https://your.domain`, `VERIALIGN_RESPONSE_POLICY=warn|block`, `VERIALIGN_BLOCK_THRESHOLD=0.55`, `VERIALIGN_REDACT_TRACES=true`.
 
 ## API Notes
 
@@ -330,6 +336,6 @@ python -m ruff format --check verialign/ tests/
 
 ## Acknowledgements
 
-- **arXiv:2605.04454** — The paper that identified the verification gap
+- **arXiv:2605.04454 — Vishwarupe et al., Oxford, May 2026** — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone* — the paper that identified the verification gap
 - **Anthropic Engineering Blog** — Proxy/containment architecture patterns
 - **Bifrost AI Gateway** — Reference for production AI gateway architecture

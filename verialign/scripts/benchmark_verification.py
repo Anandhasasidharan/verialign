@@ -1,4 +1,4 @@
-"""Benchmark end-to-end verification quality: supported/unsupported classification accuracy."""
+"""Benchmark end-to-end verification quality: supported/unsupported classification accuracy + calibration (reliability diagram)."""
 
 import asyncio
 from dataclasses import dataclass
@@ -102,6 +102,8 @@ class BenchmarkResult:
     incorrect: int
     by_status: dict[str, dict[str, int]]
     accuracy: float
+    calibration: list[dict]  # bucket -> {count, avg_confidence, accuracy, ece_contrib}
+    ece: float  # expected calibration error
 
 
 async def run_benchmark() -> BenchmarkResult:
@@ -109,10 +111,16 @@ async def run_benchmark() -> BenchmarkResult:
     correct = 0
     incorrect = 0
     by_status: dict[str, dict[str, int]] = {}
+    # For calibration: collect (predicted_confidence, is_correct) per case (majority claim)
+    calib_points: list[tuple[float, bool]] = []
 
     for case in BENCHMARK_CASES:
         result = await engine.verify(case.text, case.context)
         status_counts: dict[str, int] = {}
+        # avg confidence of claims that determine status
+        avg_conf = 0.0
+        if result.claims:
+            avg_conf = sum(c.confidence for c in result.claims) / len(result.claims)
         for claim in result.claims:
             status_counts[claim.status] = status_counts.get(claim.status, 0) + 1
 
@@ -127,6 +135,8 @@ async def run_benchmark() -> BenchmarkResult:
         else:
             incorrect += 1
 
+        calib_points.append((avg_conf, is_correct))
+
         if case.expected_status not in by_status:
             by_status[case.expected_status] = {"total": 0, "correct": 0, "incorrect": 0}
         by_status[case.expected_status]["total"] += 1
@@ -136,12 +146,31 @@ async def run_benchmark() -> BenchmarkResult:
             by_status[case.expected_status]["incorrect"] += 1
 
     accuracy = correct / len(BENCHMARK_CASES) if BENCHMARK_CASES else 0.0
+
+    # Reliability diagram bucketed by confidence (5 buckets)
+    buckets = [(0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0)]
+    calibration = []
+    ece = 0.0
+    for lo, hi in buckets:
+        bucket_points = [p for p in calib_points if lo <= p[0] < hi or (hi == 1.0 and p[0] == 1.0)]
+        count = len(bucket_points)
+        if count == 0:
+            calibration.append({"bucket": f"{lo:.1f}-{hi:.1f}", "count": 0, "avg_confidence": 0.0, "accuracy": 0.0, "ece_contrib": 0.0})
+            continue
+        avg_conf_bucket = sum(p[0] for p in bucket_points) / count
+        acc_bucket = sum(1 for p in bucket_points if p[1]) / count
+        ece_contrib = abs(avg_conf_bucket - acc_bucket) * (count / len(calib_points)) if calib_points else 0
+        ece += ece_contrib
+        calibration.append({"bucket": f"{lo:.1f}-{hi:.1f}", "count": count, "avg_confidence": round(avg_conf_bucket, 3), "accuracy": round(acc_bucket, 3), "ece_contrib": round(ece_contrib, 4)})
+
     return BenchmarkResult(
         total=len(BENCHMARK_CASES),
         correct=correct,
         incorrect=incorrect,
         by_status=by_status,
         accuracy=round(accuracy, 3),
+        calibration=calibration,
+        ece=round(ece, 4),
     )
 
 
@@ -160,7 +189,16 @@ def print_results(result: BenchmarkResult) -> None:
         print(
             f"  {status:20s}: {stats['correct']}/{stats['total']} correct ({acc:.1%})"
         )
+    print("-" * 60)
+    print("Calibration (reliability diagram): predicted confidence vs observed correctness")
+    print(f"  Expected Calibration Error (ECE): {result.ece:.4f}")
+    print(f"  {'Bucket':<12} {'Count':<6} {'AvgConf':<8} {'Accuracy':<8} {'|Gap|'}")
+    for b in result.calibration:
+        gap = abs(b["avg_confidence"] - b["accuracy"]) if b["count"] else 0
+        print(f"  {b['bucket']:<12} {b['count']:<6} {b['avg_confidence']:<8} {b['accuracy']:<8} {gap:.3f}")
     print("=" * 60)
+    print("Note: answers 'if VeriAlign says 0.8, is it right 80% of the time?'")
+    print("Re-run on every verification-engine change (CI).")
 
 
 async def main() -> None:

@@ -37,6 +37,10 @@ jobs:
         run: |
           python -m verialign.scripts.benchmark_verification
 
+      - name: Gram-style audit (overt saboteur catch >90%)
+        run: |
+          python -m verialign.scripts.audit_saboteur
+
       - name: Type check (if mypy configured)
         run: |
           pip install mypy
@@ -63,3 +67,16 @@ jobs:
         run: |
           ruff check verialign/ tests/
           ruff format --check verialign/ tests/
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

@@ -37,7 +37,12 @@ class ClaimExtractor:
             if len(llm_claims) > len(claims):
                 claims = llm_claims
 
-        return claims
+        # Claim decomposition: split compound sentences into atomic sub-claims
+        decomposed: list[str] = []
+        for claim in claims:
+            subs = self._decompose(claim)
+            decomposed.extend(subs)
+        return decomposed
 
     def _extract_regex(self, text: str) -> list[str]:
         claims: list[str] = []
@@ -77,6 +82,32 @@ class ClaimExtractor:
         except Exception:
             pass
         return []
+
+    def _decompose(self, claim: str) -> list[str]:
+        # Split on ' and ' when both sides look like factual statements
+        # e.g. "X is Y and Z does W" -> ["X is Y", "Z does W"]
+        if " and " not in claim.lower():
+            return [claim]
+        # Avoid splitting short claims where 'and' is not clausal
+        parts = re.split(r"\s+and\s+", claim, flags=re.IGNORECASE)
+        if len(parts) < 2:
+            return [claim]
+        # Only decompose if multiple parts each contain a factual cue or looks like a clause
+        atomic: list[str] = []
+        for part in parts:
+            part = part.strip().rstrip(",;")
+            if not part:
+                continue
+            # Require at least 3 tokens and either a factual verb cue or capital start
+            if _FACTUAL_CUES.search(part) or len(part.split()) >= 3:
+                # Ensure sentence-ending punctuation for downstream grounding
+                if not part.endswith((".", "!", "?")):
+                    part = part + "."
+                atomic.append(part)
+        # If decomposition produced meaningful splits, use it; otherwise keep original
+        if len(atomic) >= 2:
+            return atomic
+        return [claim]
 
     def _clean(self, sentence: str) -> str:
         sentence = re.sub(r"\s+", " ", sentence).strip(" -\n\t")

@@ -6,7 +6,7 @@
 
 ## The Problem (10 seconds)
 
-"Current LLMs hallucinate confidently. Alignment benchmarks measure helpfulness and harmlessness, but a 2026 paper (arXiv:2605.04454) audited 11 benchmarks and found **zero** provide user-facing verification — tools that help a human actually check if the output is true. You can't fix this at the model level; the paper shows a verification scaffold lifts one model to ceiling while leaving another unchanged."
+"Current LLMs hallucinate confidently. Oxford's May 2026 audit (Vishwarupe et al., arXiv:2605.04454) — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone* — found 11 alignment benchmarks provided no user-facing verification support. The authors argue that gap can't be closed at the model level alone and requires infrastructure scaffolding."
 
 ## The Solution (10 seconds)
 

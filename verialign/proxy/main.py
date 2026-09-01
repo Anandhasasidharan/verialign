@@ -27,6 +27,7 @@ from verialign.proxy.middleware.request_handler import (
     build_upstream_payload,
 )
 from verialign.proxy.middleware.response_handler import ResponseHandler
+from verialign.proxy.otel_genai import emit_genai_span
 from verialign.proxy.middleware.logging_middleware import (
     configure_logging,
     CorrelationIdMiddleware,
@@ -317,6 +318,19 @@ async def _handle_streaming(
                 verification = await verifier.verify(
                     full_text, payload.get("metadata", {}).get("context", [])
                 )
+                trust_components = {
+                    "supported": verification.summary.get("supported", 0),
+                    "unsupported": verification.summary.get("unsupported", 0),
+                    "contradictions": verification.summary.get("contradictions_found", 0),
+                    "checklist": verification.summary.get("checklist_items", 0),
+                }
+                emit_genai_span(
+                    payload,
+                    {"choices": [{"message": {"content": full_text}}]},
+                    router.get_configured_providers()[0].__class__.__name__.replace("Provider", "").lower() if router.get_configured_providers() else None,
+                    trust_score=verification.trust_score,
+                    trust_components=trust_components,
+                )
                 store = _get_store()
                 await _write_trace(
                     store,
@@ -401,13 +415,21 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
 
     llm_client = _build_llm_client(router)
     structured = payload.get("response_format", {}).get("type") == "json_object"
+    # Per-request policy override via headers (enables per-route / per-API-key config)
+    header_policy = request.headers.get("x-verialign-policy")
+    header_threshold = request.headers.get("x-verialign-block-threshold")
+    policy = header_policy if header_policy in ("pass-through", "warn", "block") else settings.response_policy
+    try:
+        threshold = float(header_threshold) if header_threshold is not None else settings.block_threshold
+    except ValueError:
+        threshold = settings.block_threshold
     verifier = VerificationEngine(
         llm_client=llm_client,
         web_api_key=settings.web_search_api_key,
         web_provider=settings.web_search_provider,
         cache=getattr(app.state, "cache", None),
     )
-    response_handler = ResponseHandler(verifier, structured_output=structured)
+    response_handler = ResponseHandler(verifier, structured_output=structured, policy=policy, block_threshold=threshold)
     augmented = await response_handler.augment(upstream_response, payload)
 
     import asyncio
@@ -435,11 +457,25 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         with_cost = replace(augmented.verification, cost=cost)
         augmented = replace(augmented, verification=with_cost)
 
+    trust_components = {
+        "supported": augmented.verification.summary.get("supported", 0),
+        "unsupported": augmented.verification.summary.get("unsupported", 0),
+        "contradictions": augmented.verification.summary.get("contradictions_found", 0),
+        "checklist": augmented.verification.summary.get("checklist_items", 0),
+    }
+    emit_genai_span(
+        payload, upstream_response, provider_name,
+        trust_score=augmented.verification.trust_score,
+        trust_components=trust_components,
+    )
+
     store = _get_store()
     await _write_trace(store, payload, augmented.data, augmented.verification)
 
     response_headers = dict(rate_limit_headers)
     response_headers["X-Provider"] = provider_name
+    # Merge policy-driven headers (warn/block)
+    response_headers.update(augmented.headers)
 
     logger.info(
         "chat_completion",
@@ -451,7 +487,7 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         },
     )
 
-    return JSONResponse(content=augmented.data, headers=response_headers)
+    return JSONResponse(content=augmented.data, headers=response_headers, status_code=augmented.status_code)
 
 
 @app.post("/v1/verify")

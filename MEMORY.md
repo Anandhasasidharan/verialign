@@ -7,9 +7,9 @@
 ## Project Identity
 
 - **What:** A reverse proxy that intercepts LLM API calls and augments responses with verification metadata (claim extraction, source grounding, contradiction detection, confidence scoring, checklists)
-- **Why:** arXiv:2605.04454 found verification support absent from every alignment benchmark — this fills the gap at the infrastructure level
+- **Why:** arXiv:2605.04454 (*Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone*, Vishwarupe et al., Oxford, May 2026) found verification support absent across 11 alignment benchmarks — this fills the deployment-relevant gap at the infrastructure level
 - **Stack:** Python 3.12, FastAPI, SQLite, Streamlit, Docker
-- **Source Paper:** arXiv:2605.04454 (May 2026)
+- **Source Paper:** arXiv:2605.04454 — Vishwarupe, Shadbolt, Jirotka, Flechais — Oxford, May 2026
 
 ## Architecture
 
@@ -83,7 +83,7 @@ Client → VeriAlign Proxy (FastAPI) → LLM Provider (OpenAI/Anthropic/Local)
 
 ## External References
 
-- arXiv:2605.04454 — The alignment verification gap paper
+- arXiv:2605.04454 — Vishwarupe et al., Oxford — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone*
 - Anthropic Engineering Blog — Proxy architecture inspiration
 - Bifrost AI Gateway — Production AI gateway reference
 
@@ -265,7 +265,7 @@ All 19 identified production gaps are now closed.
 
 ## Project Origin
 
-**Source:** arXiv:2605.04454 (May 2026) — "Alignment Benchmarks Fail to Capture User-Facing Verification Support"
+**Source:** arXiv:2605.04454 (May 2026) — Vishwarupe, Shadbolt, Jirotka, Flechais (Oxford) — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone*
 
 **Insight:** The paper audited 11 alignment benchmarks and found zero provide user-facing verification tools. The gap cannot be closed at the model level — it requires infrastructure.
 

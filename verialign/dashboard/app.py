@@ -36,7 +36,12 @@ def load_traces(limit: int = 100):
 
         try:
             v = json.loads(row["verification_json"])
-            return v.get("summary", {})
+            summary = v.get("summary", {})
+            # Surface trust_score/cost at top level for UI
+            summary["trust_score"] = v.get("trust_score", summary.get("trust_score"))
+            summary["cost"] = v.get("cost", summary.get("cost"))
+            summary["_has_block"] = 1 if "error" in json.loads(row["response_json"] or "{}") and "verification_blocked" in str(row["response_json"]) else 0
+            return summary
         except Exception:
             return {}
 
@@ -49,7 +54,8 @@ def load_traces(limit: int = 100):
 
 def render_sidebar():
     st.sidebar.title("🔍 VeriAlign")
-    st.sidebar.caption("Verification Support Proxy for LLM Outputs")
+    st.sidebar.caption("Inline verification — `docker compose up -d`")
+    st.sidebar.caption("Headline is inline `verification` in response, not this dashboard.")
 
     st.sidebar.divider()
 
@@ -66,6 +72,7 @@ def render_sidebar():
             "Drift",
             "Contradictions",
             "Trace Detail",
+            "Calibration",
         ],
         label_visibility="collapsed",
     )
@@ -80,6 +87,7 @@ def render_sidebar():
 
 def render_overview(df):
     st.header("📊 Overview")
+    st.caption("Dashboard is a trace inspector — the moat is the *inline* `verification` object in the API response (`docker compose up -d`, no sales call).")
 
     if df.empty:
         st.info(
@@ -87,7 +95,7 @@ def render_overview(df):
         )
         return
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.metric("Total Requests", len(df))
@@ -103,6 +111,13 @@ def render_overview(df):
     with col4:
         unsupported = df.get("unsupported", pd.Series([0])).sum()
         st.metric("Unsupported", int(unsupported))
+
+    with col5:
+        avg_trust = df.get("trust_score", pd.Series(dtype=float)).dropna()
+        if not avg_trust.empty:
+            st.metric("Avg Trust", f"{avg_trust.mean():.2f}")
+        else:
+            st.metric("Avg Trust", "—")
 
     st.divider()
 
@@ -358,8 +373,27 @@ def render_contradictions(df):
     st.dataframe(contra_df[available_cols].head(50), use_container_width=True)
 
 
+def render_calibration(df):
+    st.header("📐 Calibration — Reliability Diagram")
+    st.caption("If VeriAlign says 0.8, is it right 80% of the time? `docs/verification-calibration.md` is the source of truth; re-run `python -m verialign.scripts.benchmark_verification` on every `verialign/verification/*` change.")
+    import json as _json
+    from pathlib import Path as _Path
+    doc = _Path("docs/verification-calibration.md")
+    if doc.exists():
+        st.markdown(doc.read_text()[:6000])
+    else:
+        st.info("Run `python -m verialign.scripts.benchmark_verification` to generate calibration.")
+    if not df.empty and "trust_score" in df.columns:
+        st.subheader("Live trust_score distribution (loaded traces)")
+        trust = df["trust_score"].dropna()
+        if not trust.empty:
+            st.bar_chart(trust.value_counts(bins=5, sort=False))
+            st.caption(f"Loaded traces ECE proxy: avg trust {trust.mean():.3f} vs supported rate — see doc for bucketed ECE.")
+
+
 def render_trace_detail(df):
     st.header("🔍 Trace Detail")
+    st.caption("Shows inline `verification` (or `data.verification` when `response_format:json_object`) + tool-call grounding + policy outcome.")
 
     if df.empty:
         st.info("No traces found.")
@@ -375,19 +409,41 @@ def render_trace_detail(df):
         st.subheader("Request")
         import json
 
-        st.json(json.loads(trace["request_json"]))
+        req = json.loads(trace["request_json"])
+        st.json(req)
+        # Surface tool calls if present in metadata or messages
+        tool_calls = None
+        if isinstance(req.get("metadata"), dict):
+            for k in ("tool_calls", "tool_results", "tool_call_records"):
+                if req["metadata"].get(k):
+                    tool_calls = req["metadata"][k]
+                    break
+        if tool_calls:
+            st.markdown("**Tool Calls (grounded)**")
+            st.json(tool_calls)
 
     with col2:
         st.subheader("Response")
-        st.json(json.loads(trace["response_json"]))
+        import json as _json2
+        resp = _json2.loads(trace["response_json"])
+        st.json(resp)
+        if "error" in resp and resp["error"].get("type") == "verification_blocked":
+            st.error(f"Blocked by policy (422) — trust {resp.get('verification', {}).get('trust_score', '—')}")
+        elif "data" in resp and isinstance(resp["data"], dict) and "claims" in resp["data"]:
+            st.info("Structured output: verification nested under `data`")
 
     st.divider()
-    st.subheader("Verification")
+    st.subheader("Verification (inline object)")
     import json
 
     verification = json.loads(trace["verification_json"])
-
+    # Handle structured_output nesting
+    resp_for_lookup = json.loads(trace["response_json"])
+    if "data" in resp_for_lookup and isinstance(resp_for_lookup["data"], dict) and "claims" in resp_for_lookup["data"]:
+        st.caption("Response used `response_format:json_object` — verification was nested under `data`.")
     st.json(verification)
+    if verification.get("trust_score") is not None:
+        st.metric("Trust Score", verification["trust_score"])
 
     if verification.get("claims"):
         st.subheader("Claims")
@@ -429,6 +485,8 @@ def main():
         render_contradictions(df)
     elif page == "Trace Detail":
         render_trace_detail(df)
+    elif page == "Calibration":
+        render_calibration(df)
 
 
 if __name__ == "__main__":
