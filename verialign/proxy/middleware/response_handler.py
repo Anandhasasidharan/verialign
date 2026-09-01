@@ -13,7 +13,7 @@ class AugmentedResponse:
 
 
 class ResponseHandler:
-    VALID_POLICIES = {"pass-through", "warn", "block"}
+    VALID_POLICIES = {"pass-through", "warn", "block"}  # noqa: RUF012
 
     def __init__(
         self,

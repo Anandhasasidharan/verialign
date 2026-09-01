@@ -4,7 +4,7 @@ from verialign.verification.models import Contradiction
 
 
 class ContradictionDetector:
-    NEGATION_PATTERNS = [
+    NEGATION_PATTERNS = [  # noqa: RUF012
         (
             re.compile(r"\b(is|are|was|were)\b"),
             re.compile(
@@ -31,7 +31,7 @@ class ContradictionDetector:
         ),
     ]
 
-    VERB_ANTONYMS = {
+    VERB_ANTONYMS = {  # noqa: RUF012
         "increase": "decrease",
         "decrease": "increase",
         "rise": "fall",
@@ -93,7 +93,7 @@ class ContradictionDetector:
 
     def _check_negation(self, a: str, b: str) -> Contradiction | None:
         for pos_pattern, neg_pattern in self.NEGATION_PATTERNS:
-            if pos_pattern.search(a) and neg_pattern.search(b):
+            if pos_pattern.search(a) and neg_pattern.search(b):  # noqa: SIM102
                 if self._similar_subject(a, b):
                     return Contradiction(
                         claim_a=a,
@@ -101,7 +101,7 @@ class ContradictionDetector:
                         type="negation",
                         confidence=0.8,
                     )
-            if pos_pattern.search(b) and neg_pattern.search(a):
+            if pos_pattern.search(b) and neg_pattern.search(a):  # noqa: SIM102
                 if self._similar_subject(a, b):
                     return Contradiction(
                         claim_a=a,
@@ -133,7 +133,7 @@ class ContradictionDetector:
         numbers_a = re.findall(r"\b\d+(?:\.\d+)?\b", a)
         numbers_b = re.findall(r"\b\d+(?:\.\d+)?\b", b)
 
-        if numbers_a and numbers_b and self._similar_subject(a, b):
+        if numbers_a and numbers_b and self._similar_subject(a, b):  # noqa: SIM102
             if numbers_a != numbers_b:
                 return Contradiction(
                     claim_a=a,

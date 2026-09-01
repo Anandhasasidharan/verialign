@@ -114,7 +114,7 @@ class ToolGrounder:
                     0.8,
                     "status mismatch: claim says processed but tool result indicates failure",
                 )
-            if "refund" in claim_lower and tc.get("name") == "process_refund":
+            if "refund" in claim_lower and tc.get("name") == "process_refund":  # noqa: SIM102
                 # If claim says refund for X but args amount differs, already handled; else check status
                 if "processed" in claim_lower and "processed" not in result_lower:
                     return "unclear", 0.6, "refund status not confirmed in tool output"
@@ -133,7 +133,7 @@ class ToolGrounder:
                     raw = str(int(v)) if v.is_integer() else str(v)
                 else:
                     raw = str(int(float(raw)))
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
             nums.append(raw)
         return nums

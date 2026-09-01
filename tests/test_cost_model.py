@@ -90,7 +90,7 @@ class TestCostWeightedRouting:
         settings = Settings(upstream_base_url=None, upstream_api_key=None)
         router = ProviderRouter(settings)
         payload = {"model": "gpt-4o", "messages": [{"role": "user", "content": "hi"}]}
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             router.select_provider(payload)
 
     def test_select_provider_single_provider(self) -> None:

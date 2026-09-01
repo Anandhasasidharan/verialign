@@ -54,7 +54,7 @@ def validate_request(payload: dict) -> ValidatedRequest:
     for msg in messages:
         if not isinstance(msg, dict):
             msg_0 = "each message must be an object"
-            raise ValueError(msg_0)
+            raise ValueError(msg_0)  # noqa: TRY004
         if "role" not in msg or "content" not in msg:
             msg_0 = "each message must have role and content"
             raise ValueError(msg_0)
@@ -62,19 +62,19 @@ def validate_request(payload: dict) -> ValidatedRequest:
     stream = bool(payload.get("stream", False))
 
     temperature = payload.get("temperature")
-    if temperature is not None:
+    if temperature is not None:  # noqa: SIM102
         if not isinstance(temperature, (int, float)) or not (0 <= temperature <= 2):
             msg_0 = "temperature must be a number between 0 and 2"
             raise ValueError(msg_0)
 
     max_tokens = payload.get("max_tokens")
-    if max_tokens is not None:
+    if max_tokens is not None:  # noqa: SIM102
         if not isinstance(max_tokens, int) or max_tokens <= 0:
             msg_0 = "max_tokens must be a positive integer"
             raise ValueError(msg_0)
 
     top_p = payload.get("top_p")
-    if top_p is not None:
+    if top_p is not None:  # noqa: SIM102
         if not isinstance(top_p, (int, float)) or not (0 <= top_p <= 1):
             msg_0 = "top_p must be a number between 0 and 1"
             raise ValueError(msg_0)

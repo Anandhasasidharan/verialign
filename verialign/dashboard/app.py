@@ -47,8 +47,8 @@ def load_traces(limit: int = 100):
                 and "verification_blocked" in str(row["response_json"])
                 else 0
             )
-            return summary
-        except Exception:
+            return summary  # noqa: TRY300
+        except Exception:  # noqa: BLE001
             return {}
 
     summaries = df.apply(parse_verification, axis=1, result_type="expand")
@@ -269,8 +269,8 @@ def render_per_task(df) -> None:
             for task, kws in keywords.items():
                 if any(kw in user_content for kw in kws):
                     return task
-            return "general"
-        except Exception:
+            return "general"  # noqa: TRY300
+        except Exception:  # noqa: BLE001
             return "unknown"
 
     df["task"] = df.apply(classify_task, axis=1)
@@ -356,7 +356,7 @@ def render_contradictions(df) -> None:
                 c["model"] = row["model"]
                 c["created_at"] = row["created_at"]
                 all_contradictions.append(c)
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
 
     if not all_contradictions:

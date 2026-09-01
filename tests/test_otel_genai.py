@@ -17,7 +17,7 @@ class TestOtelGenai:
             def __enter__(self):
                 return self
 
-        with patch("verialign.proxy.otel_genai._otel_available", True):
+        with patch("verialign.proxy.otel_genai._otel_available", True):  # noqa: SIM117
             with patch("verialign.proxy.otel_genai._tracer") as mock_tracer:
                 mock_tracer.start_as_current_span.return_value = FakeSpan()
                 emit_genai_span(
@@ -59,7 +59,7 @@ class TestOtelGenai:
             def __enter__(self):
                 return self
 
-        with patch("verialign.proxy.otel_genai._otel_available", True):
+        with patch("verialign.proxy.otel_genai._otel_available", True):  # noqa: SIM117
             with patch("verialign.proxy.otel_genai._tracer") as mock_tracer:
                 mock_tracer.start_as_current_span.return_value = FakeSpan()
                 emit_genai_span(
@@ -84,7 +84,7 @@ class TestOtelGenai:
             def __enter__(self):
                 return self
 
-        with patch("verialign.proxy.otel_genai._otel_available", True):
+        with patch("verialign.proxy.otel_genai._otel_available", True):  # noqa: SIM117
             with patch("verialign.proxy.otel_genai._tracer") as mock_tracer:
                 mock_tracer.start_as_current_span.return_value = FakeSpan()
                 emit_genai_span(

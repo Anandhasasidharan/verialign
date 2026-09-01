@@ -78,7 +78,7 @@ class ClaimExtractor:
             claims = json.loads(content)
             if isinstance(claims, list) and all(isinstance(c, str) for c in claims):
                 return [c for c in claims if c.strip()]
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
         return []
 

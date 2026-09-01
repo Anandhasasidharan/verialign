@@ -125,4 +125,4 @@ class TestCorrelationIdMiddleware:
 
     def test_configure_logging_does_not_raise(self) -> None:
         configure_logging()
-        logging.info("post-configure test")
+        logging.info("post-configure test")  # noqa: LOG015

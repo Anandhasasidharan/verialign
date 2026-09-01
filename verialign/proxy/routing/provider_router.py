@@ -203,7 +203,7 @@ class AnthropicProvider(BaseProvider):
                         created_at.replace("Z", "+00:00"),
                     ).timestamp(),
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 created_at = 0
         elif not isinstance(created_at, int):
             created_at = 0

@@ -2,7 +2,7 @@ from verialign.verification.models import ChecklistItem as ModelChecklistItem
 
 
 class ChecklistGenerator:
-    ACTION_KEYWORDS = {
+    ACTION_KEYWORDS = {  # noqa: RUF012
         "security": [
             "password",
             "encrypt",
@@ -80,7 +80,7 @@ class ChecklistGenerator:
         ],
     }
 
-    CLAIM_CATEGORIES = {
+    CLAIM_CATEGORIES = {  # noqa: RUF012
         "factual": [
             "is",
             "are",

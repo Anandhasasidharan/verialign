@@ -37,7 +37,7 @@ class CircuitBreaker:
 
     @property
     def state(self) -> CircuitState:
-        if self._state == CircuitState.OPEN:
+        if self._state == CircuitState.OPEN:  # noqa: SIM102
             if time.monotonic() - self._last_failure_time >= self._cooldown:
                 self._state = CircuitState.HALF_OPEN
         return self._state
@@ -77,7 +77,7 @@ class CircuitBreaker:
                     "circuit_half_open_success",
                     extra={"provider": self.provider.get_provider_name()},
                 )
-            return response
+            return response  # noqa: TRY300
         except ProviderError:
             if current == CircuitState.HALF_OPEN:
                 self._state = CircuitState.OPEN

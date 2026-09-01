@@ -27,7 +27,7 @@ class WebGrounder:
         if not self.api_key:
             return []
 
-        cache_key = hashlib.md5(claim.encode()).hexdigest()
+        cache_key = hashlib.md5(claim.encode()).hexdigest()  # noqa: S324
         cached = self._cache.get(cache_key)
         if cached:
             ts, results = cached
@@ -37,7 +37,7 @@ class WebGrounder:
         try:
             results = await self._search(claim, max_results)
             self._cache[cache_key] = (time.monotonic(), results)
-            return results
+            return results  # noqa: TRY300
         except Exception:
             logger.exception("web_search_failed", extra={"claim": claim[:80]})
             return []

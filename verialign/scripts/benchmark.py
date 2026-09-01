@@ -64,7 +64,7 @@ async def run_benchmark(
                     latencies.append(elapsed)
                 else:
                     failed += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 failed += 1
 
     async with httpx.AsyncClient() as session:

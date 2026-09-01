@@ -41,7 +41,7 @@ class VerificationCache:
             self._embedder = SentenceTransformer("all-MiniLM-L6-v2")
         except ImportError:
             self._embedder = False
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._embedder = False
 
     def _ensure_embeddings(self) -> None:
@@ -52,7 +52,7 @@ class VerificationCache:
                 try:
                     emb = self._embedder.encode(original_text, convert_to_numpy=True)
                     self._embeddings[key] = (ts, emb.tolist())
-                except Exception:
+                except Exception:  # noqa: BLE001, S110
                     pass
 
     def _get_semantic_key(self, text: str) -> str | None:
@@ -78,7 +78,7 @@ class VerificationCache:
                     best_key, best_sim = key, sim
             if best_key and best_sim >= self._similarity_threshold:
                 return best_key
-        except Exception:
+        except Exception:  # noqa: BLE001, S110
             pass
         return None
 
@@ -121,7 +121,7 @@ class VerificationCache:
             try:
                 emb = self._embedder.encode(text, convert_to_numpy=True)
                 self._embeddings[key] = (time.monotonic(), emb.tolist())
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
 
     def _evict(self) -> None:

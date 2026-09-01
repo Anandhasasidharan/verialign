@@ -61,7 +61,7 @@ class EmbeddingMatcher:
         try:
             embeddings = self._encoder.encode(texts, show_progress_bar=False)
             return embeddings.tolist()
-        except Exception:
+        except Exception:  # noqa: BLE001
             return None
 
     def cosine_similarity(self, a: list[float], b: list[float]) -> float:
@@ -113,8 +113,8 @@ class TFIDFMatcher:
                     similarities.append(0.0)
                 else:
                     similarities.append(float(dot / (norm_claim * norm_context)))
-            return similarities
-        except Exception:
+            return similarities  # noqa: TRY300
+        except Exception:  # noqa: BLE001
             return [0.0] * len(context_texts)
 
 

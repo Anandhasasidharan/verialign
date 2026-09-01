@@ -70,8 +70,8 @@ class RateLimiter:
                 return False
             self._valkey.zadd(key_req, {str(now): now})
             self._valkey.expire(key_req, window * 2)
-            return True
-        except Exception:
+            return True  # noqa: TRY300
+        except Exception:  # noqa: BLE001
             return True
 
     def check_limit(

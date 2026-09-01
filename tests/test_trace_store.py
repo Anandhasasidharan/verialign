@@ -51,7 +51,7 @@ class TestRedactSensitiveData:
 
 class TestTraceStore:
     def setup_method(self) -> None:
-        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".sqlite3")
+        self.temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".sqlite3")  # noqa: SIM115
         self.temp_db.close()
         self.store = TraceStore(self.temp_db.name, redact=True)
 

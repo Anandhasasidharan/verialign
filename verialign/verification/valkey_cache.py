@@ -27,7 +27,7 @@ class ValkeyCache(VerificationCache):
             self._client = _valkey.from_url(url, decode_responses=True)
             self._client.ping()
             self._enabled = True
-        except Exception:
+        except Exception:  # noqa: BLE001
             self._client = None
             self._enabled = False
 
@@ -45,7 +45,7 @@ class ValkeyCache(VerificationCache):
                 if raw:
                     data = json.loads(raw)
                     return VerificationResult(**data)
-            except Exception:
+            except Exception:  # noqa: BLE001, S110
                 pass
         return super().get(text, context)
 
@@ -67,8 +67,8 @@ class ValkeyCache(VerificationCache):
                     },
                 )
                 self._client.setex(key, self._ttl, data)
-                return
-            except Exception:
+                return  # noqa: TRY300
+            except Exception:  # noqa: BLE001, S110
                 pass
         super().set(text, context, result)
 
