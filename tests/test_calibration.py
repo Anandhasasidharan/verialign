@@ -17,6 +17,7 @@ async def test_benchmark_returns_calibration():
         assert "avg_confidence" in b
         assert "accuracy" in b
 
+
 @pytest.mark.asyncio
 async def test_benchmark_accuracy_and_ece_bounded():
     result = await run_benchmark()

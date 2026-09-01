@@ -321,13 +321,19 @@ async def _handle_streaming(
                 trust_components = {
                     "supported": verification.summary.get("supported", 0),
                     "unsupported": verification.summary.get("unsupported", 0),
-                    "contradictions": verification.summary.get("contradictions_found", 0),
+                    "contradictions": verification.summary.get(
+                        "contradictions_found", 0
+                    ),
                     "checklist": verification.summary.get("checklist_items", 0),
                 }
                 emit_genai_span(
                     payload,
                     {"choices": [{"message": {"content": full_text}}]},
-                    router.get_configured_providers()[0].__class__.__name__.replace("Provider", "").lower() if router.get_configured_providers() else None,
+                    router.get_configured_providers()[0]
+                    .__class__.__name__.replace("Provider", "")
+                    .lower()
+                    if router.get_configured_providers()
+                    else None,
                     trust_score=verification.trust_score,
                     trust_components=trust_components,
                 )
@@ -418,9 +424,17 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
     # Per-request policy override via headers (enables per-route / per-API-key config)
     header_policy = request.headers.get("x-verialign-policy")
     header_threshold = request.headers.get("x-verialign-block-threshold")
-    policy = header_policy if header_policy in ("pass-through", "warn", "block") else settings.response_policy
+    policy = (
+        header_policy
+        if header_policy in ("pass-through", "warn", "block")
+        else settings.response_policy
+    )
     try:
-        threshold = float(header_threshold) if header_threshold is not None else settings.block_threshold
+        threshold = (
+            float(header_threshold)
+            if header_threshold is not None
+            else settings.block_threshold
+        )
     except ValueError:
         threshold = settings.block_threshold
     verifier = VerificationEngine(
@@ -429,7 +443,9 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         web_provider=settings.web_search_provider,
         cache=getattr(app.state, "cache", None),
     )
-    response_handler = ResponseHandler(verifier, structured_output=structured, policy=policy, block_threshold=threshold)
+    response_handler = ResponseHandler(
+        verifier, structured_output=structured, policy=policy, block_threshold=threshold
+    )
     augmented = await response_handler.augment(upstream_response, payload)
 
     import asyncio
@@ -464,7 +480,9 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         "checklist": augmented.verification.summary.get("checklist_items", 0),
     }
     emit_genai_span(
-        payload, upstream_response, provider_name,
+        payload,
+        upstream_response,
+        provider_name,
         trust_score=augmented.verification.trust_score,
         trust_components=trust_components,
     )
@@ -487,7 +505,11 @@ async def chat_completions(request: Request, _: None = Depends(verify_proxy_auth
         },
     )
 
-    return JSONResponse(content=augmented.data, headers=response_headers, status_code=augmented.status_code)
+    return JSONResponse(
+        content=augmented.data,
+        headers=response_headers,
+        status_code=augmented.status_code,
+    )
 
 
 @app.post("/v1/verify")

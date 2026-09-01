@@ -178,7 +178,11 @@ class SourceGrounder:
                     # evidence span that triggered NLI and downgrade if warrant is weak.
                     warrant_score = self._warrant_score(claim, context)
                     if warrant_score < 0.35:
-                        return "unclear", nli_score * warrant_score, matches[:3] if matches else []
+                        return (
+                            "unclear",
+                            nli_score * warrant_score,
+                            matches[:3] if matches else [],
+                        )
                 return "supported", nli_score, matches[:3] if matches else []
 
         if not matches and self._web_grounder and self._web_grounder.is_available():
@@ -272,11 +276,19 @@ class SourceGrounder:
         if not claim_terms:
             return 0.0
         context_texts = [c[1] for c in context]
-        sem_scores = self._compute_semantic_scores(claim, context_texts) if self.use_semantic and context_texts else [0.0] * len(context_texts)
+        sem_scores = (
+            self._compute_semantic_scores(claim, context_texts)
+            if self.use_semantic and context_texts
+            else [0.0] * len(context_texts)
+        )
         best = 0.0
         for i, (_, text) in enumerate(context):
             source_terms = self._terms(text)
-            kw = len(claim_terms & source_terms) / len(claim_terms) if claim_terms else 0.0
+            kw = (
+                len(claim_terms & source_terms) / len(claim_terms)
+                if claim_terms
+                else 0.0
+            )
             sem = sem_scores[i] if i < len(sem_scores) else 0.0
             combined = kw * 0.4 + sem * 0.6 if sem > 0 else kw
             if combined > best:

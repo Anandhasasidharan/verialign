@@ -152,16 +152,38 @@ async def run_benchmark() -> BenchmarkResult:
     calibration = []
     ece = 0.0
     for lo, hi in buckets:
-        bucket_points = [p for p in calib_points if lo <= p[0] < hi or (hi == 1.0 and p[0] == 1.0)]
+        bucket_points = [
+            p for p in calib_points if lo <= p[0] < hi or (hi == 1.0 and p[0] == 1.0)
+        ]
         count = len(bucket_points)
         if count == 0:
-            calibration.append({"bucket": f"{lo:.1f}-{hi:.1f}", "count": 0, "avg_confidence": 0.0, "accuracy": 0.0, "ece_contrib": 0.0})
+            calibration.append(
+                {
+                    "bucket": f"{lo:.1f}-{hi:.1f}",
+                    "count": 0,
+                    "avg_confidence": 0.0,
+                    "accuracy": 0.0,
+                    "ece_contrib": 0.0,
+                }
+            )
             continue
         avg_conf_bucket = sum(p[0] for p in bucket_points) / count
         acc_bucket = sum(1 for p in bucket_points if p[1]) / count
-        ece_contrib = abs(avg_conf_bucket - acc_bucket) * (count / len(calib_points)) if calib_points else 0
+        ece_contrib = (
+            abs(avg_conf_bucket - acc_bucket) * (count / len(calib_points))
+            if calib_points
+            else 0
+        )
         ece += ece_contrib
-        calibration.append({"bucket": f"{lo:.1f}-{hi:.1f}", "count": count, "avg_confidence": round(avg_conf_bucket, 3), "accuracy": round(acc_bucket, 3), "ece_contrib": round(ece_contrib, 4)})
+        calibration.append(
+            {
+                "bucket": f"{lo:.1f}-{hi:.1f}",
+                "count": count,
+                "avg_confidence": round(avg_conf_bucket, 3),
+                "accuracy": round(acc_bucket, 3),
+                "ece_contrib": round(ece_contrib, 4),
+            }
+        )
 
     return BenchmarkResult(
         total=len(BENCHMARK_CASES),
@@ -190,12 +212,16 @@ def print_results(result: BenchmarkResult) -> None:
             f"  {status:20s}: {stats['correct']}/{stats['total']} correct ({acc:.1%})"
         )
     print("-" * 60)
-    print("Calibration (reliability diagram): predicted confidence vs observed correctness")
+    print(
+        "Calibration (reliability diagram): predicted confidence vs observed correctness"
+    )
     print(f"  Expected Calibration Error (ECE): {result.ece:.4f}")
     print(f"  {'Bucket':<12} {'Count':<6} {'AvgConf':<8} {'Accuracy':<8} {'|Gap|'}")
     for b in result.calibration:
         gap = abs(b["avg_confidence"] - b["accuracy"]) if b["count"] else 0
-        print(f"  {b['bucket']:<12} {b['count']:<6} {b['avg_confidence']:<8} {b['accuracy']:<8} {gap:.3f}")
+        print(
+            f"  {b['bucket']:<12} {b['count']:<6} {b['avg_confidence']:<8} {b['accuracy']:<8} {gap:.3f}"
+        )
     print("=" * 60)
     print("Note: answers 'if VeriAlign says 0.8, is it right 80% of the time?'")
     print("Re-run on every verification-engine change (CI).")

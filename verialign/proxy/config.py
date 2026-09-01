@@ -83,9 +83,7 @@ class Settings(BaseSettings):
     response_policy: str = Field(
         default="pass-through", alias="VERIALIGN_RESPONSE_POLICY"
     )
-    block_threshold: float = Field(
-        default=0.5, alias="VERIALIGN_BLOCK_THRESHOLD"
-    )
+    block_threshold: float = Field(default=0.5, alias="VERIALIGN_BLOCK_THRESHOLD")
 
     model_config = SettingsConfigDict(
         env_file=".env",

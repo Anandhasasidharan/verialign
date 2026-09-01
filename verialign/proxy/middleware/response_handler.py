@@ -29,13 +29,19 @@ class ResponseHandler:
 
     def _extract_tool_calls(self, request_payload: dict) -> list[dict] | None:
         # Prefer explicit metadata.tool_calls / tool_results
-        meta = request_payload.get("metadata", {}) if isinstance(request_payload.get("metadata"), dict) else {}
+        meta = (
+            request_payload.get("metadata", {})
+            if isinstance(request_payload.get("metadata"), dict)
+            else {}
+        )
         for key in ("tool_calls", "tool_results", "tool_call_records"):
             if isinstance(meta.get(key), list) and meta.get(key):
                 return meta.get(key)
             if isinstance(meta.get(key), dict):
                 return [meta.get(key)]
-        if isinstance(request_payload.get("tool_calls"), list) and request_payload.get("tool_calls"):
+        if isinstance(request_payload.get("tool_calls"), list) and request_payload.get(
+            "tool_calls"
+        ):
             return request_payload["tool_calls"]
         # Fallback: messages with role == "tool" or tool_calls inside assistant messages
         messages = request_payload.get("messages", [])
@@ -45,13 +51,29 @@ class ResponseHandler:
                 if not isinstance(msg, dict):
                     continue
                 if msg.get("role") == "tool":
-                    tool_msgs.append({"name": msg.get("name", "tool"), "arguments": {}, "result": msg.get("content", "")})
+                    tool_msgs.append(
+                        {
+                            "name": msg.get("name", "tool"),
+                            "arguments": {},
+                            "result": msg.get("content", ""),
+                        }
+                    )
                 # OpenAI tool_calls shape in assistant messages
                 if isinstance(msg.get("tool_calls"), list):
                     for tc in msg["tool_calls"]:
                         if isinstance(tc, dict):
-                            func = tc.get("function", {}) if isinstance(tc.get("function"), dict) else {}
-                            tool_msgs.append({"name": func.get("name", tc.get("name","")), "arguments": func.get("arguments", {}), "result": tc.get("result","")})
+                            func = (
+                                tc.get("function", {})
+                                if isinstance(tc.get("function"), dict)
+                                else {}
+                            )
+                            tool_msgs.append(
+                                {
+                                    "name": func.get("name", tc.get("name", "")),
+                                    "arguments": func.get("arguments", {}),
+                                    "result": tc.get("result", ""),
+                                }
+                            )
         return tool_msgs if tool_msgs else None
 
     async def augment(
@@ -62,7 +84,10 @@ class ResponseHandler:
         tool_calls = self._extract_tool_calls(request_payload)
         try:
             verification = await self.verifier.verify(
-                assistant_text, context, response_data=upstream_response, tool_calls=tool_calls
+                assistant_text,
+                context,
+                response_data=upstream_response,
+                tool_calls=tool_calls,
             )
         except TypeError as exc:
             if "tool_calls" in str(exc):
@@ -91,7 +116,11 @@ class ResponseHandler:
         # Only apply policy when trust_score is available
         should_evaluate = trust_score is not None
 
-        if self.policy == "block" and should_evaluate and trust_score < self.block_threshold:
+        if (
+            self.policy == "block"
+            and should_evaluate
+            and trust_score < self.block_threshold
+        ):
             blocked = {
                 "error": {
                     "message": f"Response blocked by verification policy: trust_score {trust_score:.3f} below threshold {self.block_threshold:.3f}",
@@ -110,7 +139,11 @@ class ResponseHandler:
                 headers={"X-VeriAlign-Blocked": "true"},
             )
 
-        if self.policy == "warn" and should_evaluate and trust_score < self.block_threshold:
+        if (
+            self.policy == "warn"
+            and should_evaluate
+            and trust_score < self.block_threshold
+        ):
             # Inject visible caveat into content and set warning header
             caveat = f"[VeriAlign warning: trust_score {trust_score:.3f} below threshold {self.block_threshold:.3f} — verification recommended] "
             choices = response.get("choices")
@@ -120,7 +153,9 @@ class ResponseHandler:
                     response["choices"] = [dict(c) for c in choices]
                     response["choices"][0] = dict(choices[0])
                     response["choices"][0]["message"] = dict(msg)
-                    response["choices"][0]["message"]["content"] = caveat + msg["content"]
+                    response["choices"][0]["message"]["content"] = (
+                        caveat + msg["content"]
+                    )
             return AugmentedResponse(
                 data=response,
                 verification=verification,

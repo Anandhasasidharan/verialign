@@ -12,12 +12,14 @@ async def test_rescoring_downgrades_warrant_gap():
     warrant = grounder._warrant_score("The refund was processed for $50", context)
     assert warrant < 0.35
 
+
 @pytest.mark.asyncio
 async def test_rescoring_preserves_good_warrant():
     grounder = SourceGrounder(use_semantic=False, use_nli=False, use_rescoring=True)
     context = [("doc-1", "The refund was processed for $50 and status is processed.")]
     warrant = grounder._warrant_score("The refund was processed for $50", context)
     assert warrant > 0.5
+
 
 @pytest.mark.asyncio
 async def test_rescoring_flag_exists():

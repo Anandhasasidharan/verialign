@@ -1,10 +1,8 @@
-import pytest
 from verialign.verification.models import (
     VerificationResult,
     VerifiedClaim,
     Contradiction,
     ChecklistItem,
-    SourceMatch,
 )
 from verialign.verification.trust_scorer import TrustScorer
 
@@ -39,7 +37,9 @@ class TestTrustScorer:
         result_a = VerificationResult(claims=claims, contradictions=[], checklist=[])
         result_b = VerificationResult(
             claims=claims,
-            contradictions=[Contradiction(claim_a="a", claim_b="b", type="negation", confidence=0.8)],
+            contradictions=[
+                Contradiction(claim_a="a", claim_b="b", type="negation", confidence=0.8)
+            ],
             checklist=[],
         )
         score_a = self.scorer.score(result_a)
@@ -53,7 +53,12 @@ class TestTrustScorer:
             claims=claims,
             contradictions=[],
             checklist=[
-                ChecklistItem(description="fix", category="security", priority="high", related_claims=[])
+                ChecklistItem(
+                    description="fix",
+                    category="security",
+                    priority="high",
+                    related_claims=[],
+                )
             ],
         )
         score_a = self.scorer.score(result_a)
@@ -71,7 +76,9 @@ class TestTrustScorer:
 
     def test_trust_score_in_verification_result(self):
         claims = [self._make_claim("supported", 0.95) for _ in range(3)]
-        result = VerificationResult(claims=claims, contradictions=[], checklist=[], trust_score=0.9)
+        result = VerificationResult(
+            claims=claims, contradictions=[], checklist=[], trust_score=0.9
+        )
         d = result.to_dict()
         assert d["trust_score"] == 0.9
         assert d["summary"]["trust_score"] == 0.9

@@ -89,7 +89,12 @@ class TestOtelGenai:
                 mock_tracer.start_as_current_span.return_value = FakeSpan()
                 emit_genai_span(
                     {"model": "gpt-4o"},
-                    {"id": "chatcmpl-123", "model": "gpt-4o", "usage": {}, "choices": [{}]},
+                    {
+                        "id": "chatcmpl-123",
+                        "model": "gpt-4o",
+                        "usage": {},
+                        "choices": [{}],
+                    },
                     provider="anthropic",
                 )
 
