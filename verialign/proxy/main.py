@@ -326,6 +326,7 @@ async def _handle_streaming(
                     web_api_key=settings.web_search_api_key,
                     web_provider=settings.web_search_provider,
                     cache=getattr(app.state, "cache", None),
+                    use_rescoring=settings.use_rescoring,
                 )
                 verification = await verifier.verify(
                     full_text,
@@ -457,6 +458,7 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
         web_api_key=settings.web_search_api_key,
         web_provider=settings.web_search_provider,
         cache=getattr(app.state, "cache", None),
+        use_rescoring=settings.use_rescoring,
     )
     response_handler = ResponseHandler(
         verifier,
@@ -554,6 +556,7 @@ async def verify_text(request: Request, _: Annotated[None, Depends(verify_proxy_
             web_api_key=settings.web_search_api_key,
             web_provider=settings.web_search_provider,
             cache=getattr(app.state, "cache", None),
+            use_rescoring=settings.use_rescoring,
         )
         result = await verifier.verify(text, context)
         return JSONResponse(content={"verification": result.to_dict()})

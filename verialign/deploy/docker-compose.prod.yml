@@ -35,7 +35,7 @@ services:
       VERIALIGN_PROXY_API_KEY: ${VERIALIGN_PROXY_API_KEY}
       VERIALIGN_REQUIRE_PROXY_AUTH: "true"
       VERIALIGN_ADMIN_API_KEY: ${VERIALIGN_ADMIN_API_KEY}
-      VERIALIGN_CORS_ALLOWED_ORIGINS: ${VERIALIGN_CORS_ALLOWED_ORIGINS:-https://your.domain}
+      VERIALIGN_CORS_ALLOWED_ORIGINS: ${VERIALIGN_CORS_ALLOWED_ORIGINS:-[]}
       VERIALIGN_RESPONSE_POLICY: ${VERIALIGN_RESPONSE_POLICY:-warn}
       VERIALIGN_BLOCK_THRESHOLD: ${VERIALIGN_BLOCK_THRESHOLD:-0.55}
       VERIALIGN_REDACT_TRACES: "true"
@@ -84,6 +84,8 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      VERIALIGN_DOMAIN: ${VERIALIGN_DOMAIN:-your.domain}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

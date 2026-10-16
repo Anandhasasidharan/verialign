@@ -65,6 +65,7 @@ Optional features:
 
 ```bash
 pip install -e ".[nli]"        # NLI hallucination detection (transformers + torch)
+pip install -e ".[semantic]"   # Embedding near-match cache + re-scoring (sentence-transformers, scikit-learn)
 pip install -e ".[valkey]"     # Valkey distributed cache (shared across workers)
 pip install -e ".[sentry]"     # Sentry error tracking
 pip install -e ".[otel]"       # OpenTelemetry instrumentation
@@ -148,11 +149,14 @@ Every response includes a `verification` object:
 | **Proxy auth** | Optional API-key authentication |
 | **Safety middleware** | PII redaction (email/phone/SSN/credit card), jailbreak detection, toxicity filtering |
 | **Trace persistence** | SQLite (sync) or Postgres (async) storage with sensitive data redaction |
-| **Admin API** | Read-only `/admin/*` endpoints: config, providers, traces, pricing |
+| **Admin API** | `/admin/*` read endpoints (providers, traces, pricing, circuits) + `PUT /admin/pricing` to mutate pricing at runtime |
+| **Response policy** | `pass-through` / `warn` / `block` driven by `trust_score` (per-request override via `X-VeriAlign-Policy` header) |
+| **Verification batch API** | `POST /v1/verify` — verify arbitrary text + context without proxying an LLM call |
+| **Tool-call grounding** | Grounds claims against `metadata.tool_calls` / `role=tool` messages (catches "refund was $50" after `process_refund(amount=45)`) |
 | **Metrics** | Prometheus `/metrics` endpoint |
 | **Valkey cache** | Distributed cache drop-in when `VERIALIGN_VALKEY_URL` is set |
 | **Streaming** | SSE passthrough with post-stream verification and trace storage |
-| **Structured output** | Detects `response_format: {type: "json_object"}` |
+| **Structured output** | Nests the verification report under `data` for `response_format: {type: "json_object"}` requests |
 | **Sentry** | Error tracking when `VERIALIGN_SENTRY_DSN` is set |
 | **OpenTelemetry** | FastAPI instrumentation when `VERIALIGN_ENABLE_OTEL=true` |
 | **Seed data** | Generate sample traces for demo |
@@ -175,106 +179,108 @@ All via environment variables:
 | `VERIALIGN_REQUIRE_PROXY_AUTH` | No | false | Enable proxy authentication |
 | `VERIALIGN_RATE_LIMIT_RPM` | No | 60 | Requests per minute per client |
 | `VERIALIGN_RATE_LIMIT_TPM` | No | 100000 | Tokens per minute per client |
+| `VERIALIGN_RATE_LIMIT_KEY_RPM` | No | 300 | Requests/min per API key |
+| `VERIALIGN_RATE_LIMIT_KEY_TPM` | No | 500000 | Tokens/min per API key |
 | `VERIALIGN_REDACT_TRACES` | No | true | Redact secrets from stored traces |
-| `VERIALIGN_MAX_BODY_SIZE` | No | 10_485_760 | Request body size limit (bytes) |
-| `VERIALIGN_REQUEST_TIMEOUT` | No | 30 | Request timeout (seconds) |
-| `VERIALIGN_CORS_ORIGINS` | No | * | Allowed CORS origins |
+| `VERIALIGN_MAX_REQUEST_BODY_SIZE` | No | 10485760 | Request body size limit (bytes) |
+| `VERIALIGN_PROXY_TIMEOUT_SECONDS` | No | 120 | End-to-end proxy timeout (seconds) |
+| `VERIALIGN_CORS_ALLOWED_ORIGINS` | No | `[]` | Allowed CORS origins (opt-in JSON list) |
+| `VERIALIGN_RESPONSE_POLICY` | No | pass-through | `pass-through` \| `warn` \| `block` |
+| `VERIALIGN_BLOCK_THRESHOLD` | No | 0.5 | trust_score below which warn/block applies |
+| `VERIALIGN_USE_RESCORING` | No | false | Claim-conditioned re-scoring (needs `semantic` extra) |
 | `VERIALIGN_VALKEY_URL` | No | — | Valkey connection string |
-| `VERIALIGN_ADMIN_KEY` | No | — | Admin API key (`X-Admin-Key` header) |
+| `VERIALIGN_ADMIN_API_KEY` | No | — | Admin API key (`X-Admin-Key` header) |
 | `VERIALIGN_SENTRY_DSN` | No | — | Sentry DSN for error tracking |
 | `VERIALIGN_ENABLE_OTEL` | No | false | Enable OpenTelemetry instrumentation |
+| `VERIALIGN_ALERT_WEBHOOK_URL` | No | — | Webhook for unsupported/contradiction alerts |
+| `VERIALIGN_ALERT_SLACK_WEBHOOK_URL` | No | — | Slack webhook for alerts |
 | `VERIALIGN_WEB_SEARCH_API_KEY` | No | — | Tavily API key for web search grounding |
 | `VERIALIGN_WEB_SEARCH_PROVIDER` | No | tavily | Web search provider (tavily/serpapi) |
-| `VERIALIGN_SAFETY_ENABLED` | No | true | Enable safety middleware |
-| `VERIALIGN_SAFETY_PII_ENABLED` | No | true | Enable PII redaction |
+| `VERIALIGN_SAFETY_PII_REDACT_ENABLED` | No | true | Enable PII redaction |
 | `VERIALIGN_SAFETY_JAILBREAK_ENABLED` | No | true | Enable jailbreak detection |
 | `VERIALIGN_SAFETY_TOXICITY_ENABLED` | No | true | Enable toxicity filtering |
 
 ## Project Structure
 
 ```
-verialign/
+VeriAlign/
 ├── README.md
+├── ROADMAP.md
+├── AGENTS.md
 ├── pyproject.toml
 ├── .env.example
+├── alembic/                              # DB migrations
 ├── verialign/
 │   ├── proxy/
 │   │   ├── main.py                       # FastAPI entry point
 │   │   ├── admin.py                      # Admin API (/admin/*)
 │   │   ├── config.py                     # Settings from env vars
+│   │   ├── otel_genai.py                 # GenAI semantic-convention spans
 │   │   ├── middleware/
-│   │   │   ├── rate_limiter.py           # Token bucket rate limiter
+│   │   │   ├── rate_limiter.py           # Token bucket (per IP + per API key)
 │   │   │   ├── request_handler.py        # Validate incoming requests
-│   │   │   ├── response_handler.py       # Augment responses with verification
-│   │   │   ├── safety.py                 # PII redaction, jailbreak, toxicity
-│   │   │   ├── metrics.py                # Prometheus /metrics
-│   │   │   ├── logging_middleware.py     # Structured JSON logging
+│   │   │   ├── response_handler.py       # Augment + response policy (warn/block)
+│   │   │   ├── safety_middleware.py      # PII redaction, jailbreak, toxicity
+│   │   │   ├── metrics_middleware.py     # Prometheus /metrics
+│   │   │   ├── logging_middleware.py     # Structured JSON logging + request IDs
 │   │   │   ├── body_size_limit.py        # Request body size guard
 │   │   │   └── request_timeout.py        # Request timeout guard
 │   │   └── routing/
 │   │       ├── provider_router.py        # Route to OpenAI/Anthropic/local
-│   │       ├── cost_model.py             # 16-model pricing table
+│   │       ├── cost_model.py             # Model pricing table
+│   │       ├── circuit_breaker.py        # Per-provider circuit breaker
 │   │       └── fallback.py               # Provider fallback on failure
 │   ├── verification/
 │   │   ├── engine.py                     # Orchestrates verification pipeline
-│   │   ├── claim_extractor.py            # Extract factual claims
-│   │   ├── source_grounder.py            # NLI + keyword + web search grounding
+│   │   ├── claim_extractor.py            # Claim extraction + decomposition
+│   │   ├── source_grounder.py            # NLI + keyword + web + re-scoring
 │   │   ├── nli_grounder.py               # cross-encoder/nli-deberta-v3-base
+│   │   ├── tool_grounder.py              # Ground claims vs tool-call records
+│   │   ├── trust_scorer.py               # Aggregate trust_score
 │   │   ├── contradiction_detector.py     # Cross-check internal contradictions
 │   │   ├── confidence_scorer.py          # Logprob + heuristic scoring
 │   │   ├── checklist_generator.py        # Actionable verification checklists
-│   │   ├── verification_cache.py         # Semantic cache (exact + near-match)
+│   │   ├── alerting.py                   # Webhook/Slack alerts
+│   │   ├── verification_cache.py         # Cache (exact + semantic near-match)
+│   │   ├── valkey_cache.py               # Valkey-backed cache
 │   │   ├── web_grounder.py               # Tavily/SerpAPI web search
 │   │   └── models.py                     # Dataclasses for verification data
 │   ├── storage/
 │   │   ├── models.py                     # SQLAlchemy ORM models
-│   │   ├── trace_store.py                # SQLite + Postgres persistence
-│   │   ├── valkey_cache.py               # Valkey distributed cache
+│   │   ├── trace_store.py                # SQLite persistence
+│   │   ├── async_trace_store.py          # Postgres (async) persistence
+│   │   ├── store_factory.py              # Choose sync/async store
 │   │   └── metrics_store.py              # Aggregated metrics queries
+│   ├── scripts/
+│   │   ├── benchmark_claims.py           # Claim-extraction benchmark (CI)
+│   │   ├── benchmark_verification.py     # Verification + calibration (CI)
+│   │   ├── audit_saboteur.py             # Overt-saboteur catch-rate audit (CI)
+│   │   ├── adversarial_benchmark.py      # Adversarial claim suite
+│   │   ├── benchmark.py                  # Latency benchmarking
+│   │   └── seed_data.py                  # Generate sample traces
+│   ├── deploy/
+│   │   ├── Dockerfile
+│   │   ├── Dockerfile.dashboard
+│   │   ├── docker-compose.yml
+│   │   ├── docker-compose.prod.yml
+│   │   └── Caddyfile
 │   └── dashboard/
 │       └── app.py                        # Streamlit entry point
-├── tests/
-│   ├── test_api.py
-│   ├── test_adversarial_benchmark.py
-│   ├── test_benchmark_scripts.py
-│   ├── test_claim_extractor.py
-│   ├── test_source_grounder.py
-│   ├── test_nli_grounder.py
-│   ├── test_contradiction_detector.py
-│   ├── test_confidence_scorer.py
-│   ├── test_checklist_generator.py
-│   ├── test_cost_model.py
-│   ├── test_provider_router.py
-│   ├── test_fallback.py
-│   ├── test_rate_limiter.py
-│   ├── test_request_handler.py
-│   ├── test_response_handler.py
-│   ├── test_trace_store.py
-│   ├── test_store_switching.py
-│   ├── test_verification_cache.py
-│   ├── test_semantic_cache.py
-│   ├── test_web_grounder.py
-│   ├── test_integration.py
-│   ├── test_demo_warning.py
-│   ├── test_middleware_body_size_limit.py
-│   ├── test_middleware_logging.py
-│   ├── test_middleware_metrics.py
-│   └── test_middleware_request_timeout.py
-├── scripts/
-│   ├── seed_data.py                      # Generate sample traces
-│   └── benchmark.py                      # Latency benchmarking
-├── deploy/
-│   ├── Dockerfile
-│   ├── Dockerfile.dashboard
-│   ├── docker-compose.yml
-│   └── .env.example
+├── tests/                                # one test_<module>.py per module
 ├── docs/
 │   ├── architecture.md
 │   ├── deployment.md
 │   ├── paper-summary.md
-│   └── interview-pitch.md
+│   ├── interview-pitch.md
+│   ├── VeriAlign.md                       # Product/positioning overview
+│   ├── distilgpt2.md                      # LLM-as-judge experiment notes
+│   ├── verification-calibration.md       # Reliability diagram + ECE
+│   └── distilgpt2-test-results.md        # Ad-hoc LLM-as-judge validation
+├── scripts/
+│   └── audit_saboteur.py                 # Top-level audit runner (CI)
 └── .github/workflows/
-    └── test.yml
+    ├── test.yml                          # pytest + benchmarks + ruff + gitleaks
+    └── deploy.yml
 ```
 
 ## API Endpoints
@@ -283,13 +289,16 @@ verialign/
 |--------|------|-------------|
 | GET | `/health` | Health check |
 | GET | `/health/deep` | Deep health check (DB, config) |
-| POST | `/v1/chat/completions` | Chat completion with verification |
+| POST | `/v1/chat/completions` | Chat completion with inline verification |
+| POST | `/v1/verify` | Verify arbitrary `{text, context}` without proxying |
 | GET | `/traces?limit=25` | List recent traces |
 | GET | `/metrics` | Prometheus metrics |
-| GET | `/admin/config` | Runtime config (admin key required) |
+| GET | `/admin/health` | Admin health/version (admin key required) |
 | GET | `/admin/providers` | Configured providers (admin key required) |
 | GET | `/admin/traces` | All traces (admin key required) |
 | GET | `/admin/pricing` | Model pricing table (admin key required) |
+| PUT | `/admin/pricing` | Add/update a model's pricing at runtime (admin key required) |
+| GET | `/admin/circuits` | Provider circuit-breaker status (admin key required) |
 
 ## Deployment
 
@@ -298,7 +307,7 @@ verialign/
 docker compose -f verialign/deploy/docker-compose.yml up -d
 
 # Production (Postgres+Valkey+Caddy TLS, 4 workers, healthchecks)
-# 1) cp .env.example .env && set VERIALIGN_PROXY_API_KEY, ADMIN_API_KEY, POSTGRES_PASSWORD, DOMAIN
+# 1) cp .env.example .env && set VERIALIGN_PROXY_API_KEY, VERIALIGN_ADMIN_API_KEY, POSTGRES_PASSWORD, VERIALIGN_DOMAIN
 # 2) docker compose -f verialign/deploy/docker-compose.prod.yml up -d
 #    -> Caddy auto-TLS to https://your.domain, proxy + dashboard behind it
 #    -> alembic upgrade head runs on start, /health and /metrics behind allowlist
@@ -309,14 +318,18 @@ flyctl launch && flyctl deploy  # or railway up
 
 See `docs/deployment.md` for systemd, Caddyfile, and prod env checklist.
 
-**Prod env checklist:** `VERIALIGN_DATABASE_URL` (or `POSTGRES_PASSWORD` for compose), `VERIALIGN_VALKEY_URL`, `VERIALIGN_REQUIRE_PROXY_AUTH=true`, `VERIALIGN_CORS_ALLOWED_ORIGINS=https://your.domain`, `VERIALIGN_RESPONSE_POLICY=warn|block`, `VERIALIGN_BLOCK_THRESHOLD=0.55`, `VERIALIGN_REDACT_TRACES=true`.
+**Prod env checklist:** `VERIALIGN_DATABASE_URL` (or `POSTGRES_PASSWORD` for compose), `VERIALIGN_VALKEY_URL`, `VERIALIGN_REQUIRE_PROXY_AUTH=true`, `VERIALIGN_CORS_ALLOWED_ORIGINS='["https://your.domain"]'` (JSON list — an empty list allows no cross-origin requests), `VERIALIGN_RESPONSE_POLICY=warn|block`, `VERIALIGN_BLOCK_THRESHOLD=0.55`, `VERIALIGN_REDACT_TRACES=true`.
 
 ## API Notes
 
 - Responses include a `cost` field when upstream `usage` data is available
-- Admin endpoints require `X-Admin-Key` header matching `VERIALIGN_ADMIN_KEY`
-- Admin is read-only (no mutation endpoints)
+- Admin endpoints require `X-Admin-Key` header matching `VERIALIGN_ADMIN_API_KEY`
+- Admin is read-only except `PUT /admin/pricing`. When no admin key is set, all
+  `/admin/*` endpoints return `503` (disabled), not `200`
 - `metadata.context` may be a list of strings or objects with `id` and `text`
+- `metadata.tool_calls` (or `role: "tool"` messages) are grounded against the response
+- Per-request policy override: send `X-VeriAlign-Policy` (`pass-through`/`warn`/`block`)
+  and optional `X-VeriAlign-Block-Threshold`
 - If no upstream provider is configured, VeriAlign uses demo mode
 - Streaming (`stream=true`) is supported via SSE — post-stream verification is stored after the stream ends
 

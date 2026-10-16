@@ -78,7 +78,7 @@ Services:
 | `VERIALIGN_REDACT_TRACES` | No | Redact secrets (true/false) |
 | `VERIALIGN_DB_PATH` | No | SQLite path (default: ./verialign.sqlite3) |
 | `VERIALIGN_DATABASE_URL` | No | Database URL for async engines (e.g. `postgresql+asyncpg://user:pass@host/db`). Defaults to SQLite. |
-| `VERIALIGN_CORS_ALLOWED_ORIGINS` | No | CORS origins (comma-separated, default `*`) |
+| `VERIALIGN_CORS_ALLOWED_ORIGINS` | No | CORS origins as a JSON list (default `[]` — no cross-origin requests allowed; opt in explicitly) |
 | `VERIALIGN_MAX_REQUEST_BODY_SIZE` | No | Max request body in bytes (default 10MB) |
 | `VERIALIGN_PROXY_TIMEOUT_SECONDS` | No | Proxy-side request timeout (default 120s) |
 
@@ -312,7 +312,7 @@ The async store uses a connection pool (size=10, overflow=20) and supports the s
 - [ ] Monitor for unusual patterns in verification results
 - [ ] Use a secrets vault for API keys (HashiCorp Vault, AWS Secrets Manager, 1Password CLI) instead of plaintext env vars
 - [ ] Rotate API keys regularly
-- [ ] Set `VERIALIGN_CORS_ALLOWED_ORIGINS` to specific origins (not `*`)
+- [ ] Set `VERIALIGN_CORS_ALLOWED_ORIGINS` to a JSON list of specific origins, e.g. `["https://your.domain"]`
 - [ ] Set `VERIALIGN_MAX_REQUEST_BODY_SIZE` to an appropriate limit for your use case
 - [ ] Use `--workers N` where N equals your CPU core count for production
 

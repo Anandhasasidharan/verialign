@@ -33,8 +33,13 @@ nli = [
     "transformers>=4.47.0",
     "torch>=2.0.0",
 ]
+# Semantic near-match cache + claim-conditioned re-scoring (embedding similarity).
+semantic = [
+    "sentence-transformers>=3.0.0",
+    "scikit-learn>=1.4.0",
+]
 all = [
-    "verialign[dev,async,valkey,sentry,otel,nli]",
+    "verialign[dev,async,valkey,sentry,otel,nli,semantic]",
 ]
 
 [tool.setuptools.packages.find]
