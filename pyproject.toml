@@ -57,6 +57,7 @@ dev = [
     "textual>=0.80",
     "build>=1.2.0",
     "twine>=5.1.0",
+    "alembic>=1.13",
 ]
 async = [
     "sqlalchemy[asyncio]>=2.0.0",
