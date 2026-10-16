@@ -104,6 +104,7 @@ class Settings(BaseSettings):
     )
     block_threshold: float = Field(default=0.5, alias="VERIALIGN_BLOCK_THRESHOLD")
     use_rescoring: bool = Field(default=False, alias="VERIALIGN_USE_RESCORING")
+    use_nli: bool = Field(default=True, alias="VERIALIGN_USE_NLI")
 
     model_config = SettingsConfigDict(
         env_file=".env",

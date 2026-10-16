@@ -1,5 +1,7 @@
 # VeriAlign — Verification Support Proxy for LLM Outputs
 
+[![PyPI](https://img.shields.io/pypi/v/verialign.svg)](https://pypi.org/project/verialign/) [![Tests](https://github.com/Anandhasasidharan/verialign/actions/workflows/test.yml/badge.svg)](https://github.com/Anandhasasidharan/verialign/actions/workflows/test.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > **Domain:** Alignment  
 > **Source Paper:** arXiv:2605.04454 — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone* (Vishwarupe, Shadbolt, Jirotka, Flechais — Oxford, May 2026)  
 > **Stack:** Python 3.11+, FastAPI, Textual (TUI), SQLite/Postgres, Ruff, Docker, optional: Valkey, Sentry, OpenTelemetry
@@ -230,6 +232,7 @@ All via environment variables:
 | `VERIALIGN_RESPONSE_POLICY` | No | pass-through | `pass-through` \| `warn` \| `block` |
 | `VERIALIGN_BLOCK_THRESHOLD` | No | 0.5 | trust_score below which warn/block applies |
 | `VERIALIGN_USE_RESCORING` | No | false | Claim-conditioned re-scoring (needs `semantic` extra) |
+| `VERIALIGN_USE_NLI`     | No | true  | NLI grounding detector (`cross-encoder/nli-deberta-v3-base`); lazy-loaded, ~80ms per batch. Needs the `nli` extra. Set false for keyword-only runs / offline usage. |
 | `VERIALIGN_VALKEY_URL` | No | — | Valkey connection string |
 | `VERIALIGN_ADMIN_API_KEY` | No | — | Admin API key (`X-Admin-Key` header) |
 | `VERIALIGN_SENTRY_DSN` | No | — | Sentry DSN for error tracking |

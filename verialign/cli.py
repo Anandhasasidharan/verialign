@@ -67,10 +67,10 @@ def cmd_serve(args: argparse.Namespace) -> int:
 # -------------------------------------------------------------------------- verify
 
 
-async def _run_verification(text: str, context: list) -> dict:
+async def _run_verification(text: str, context: list, use_nli: bool = True) -> dict:
     from verialign.verification.engine import VerificationEngine
 
-    engine = VerificationEngine()
+    engine = VerificationEngine(use_nli=use_nli)
     result = await engine.verify(text, context)
     return result.to_dict()
 
@@ -95,13 +95,14 @@ def cmd_verify(args: argparse.Namespace) -> int:
         print("provide --text or --text-file", file=sys.stderr)
         return 2
 
+    use_nli = not args.no_nli
     try:
         context = _load_context(args.context_file)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"could not read context: {exc}", file=sys.stderr)
         return 2
 
-    payload = asyncio.run(_run_verification(text, context))
+    payload = asyncio.run(_run_verification(text, context, use_nli=use_nli))
     _print_json(payload)
     return 0
 
@@ -222,6 +223,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_verify.add_argument(
         "--context-file",
         help="JSON file with a list of strings or {id, text} objects",
+    )
+    p_verify.add_argument(
+        "--no-nli",
+        action="store_true",
+        help="disable the NLI grounding detector (faster, keyword-only)",
     )
     p_verify.set_defaults(func=cmd_verify)
 

@@ -20,6 +20,7 @@
 - Three `VerificationEngine(...)` constructions in `main.py` (streaming, chat, `/v1/verify`) — keep settings wiring in sync (e.g. `use_rescoring=settings.use_rescoring`)
 - Response policy: `VERIALIGN_RESPONSE_POLICY` (`pass-through`/`warn`/`block`) + `VERIALIGN_BLOCK_THRESHOLD`; per-request override via `X-VeriAlign-Policy` header
 - `VERIALIGN_USE_RESCORING` (default false) enables the claim-conditioned warrant-gap re-scoring; needs the `semantic` extra
+- `VERIALIGN_USE_NLI` (default true) toggles the NLI detector (`cross-encoder/nli-deberta-v3-base`); cached model load; needs the `nli` extra. Set false for keyword-only / offline runs (CLI: `verialign verify --no-nli`)
 - README env-var names must match `config.py` aliases — they had drifted before
 - `check_limit()` return value **must** be checked — returns `(allowed, info)` tuple
 - Use `build_headers(info, allowed)` to avoid double-consuming the bucket

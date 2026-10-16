@@ -8,7 +8,7 @@ description = "OpenAI-compatible verification support proxy for LLM outputs"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "Anandhasasidharan" }]
+authors = [{ name = "Anandhasasidharan", email = "Anandhasasidharan@users.noreply.github.com" }]
 keywords = [
     "llm",
     "hallucination",

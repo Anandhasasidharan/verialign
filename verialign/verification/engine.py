@@ -25,10 +25,11 @@ class VerificationEngine:
         cache_ttl: int = 300,
         cache: VerificationCache | None = None,
         use_rescoring: bool = False,
+        use_nli: bool = True,
     ) -> None:
         self.claim_extractor = ClaimExtractor(llm_client=llm_client)
         self.source_grounder = SourceGrounder(
-            use_nli=True,
+            use_nli=use_nli,
             web_api_key=web_api_key,
             web_provider=web_provider,
             use_rescoring=use_rescoring,
