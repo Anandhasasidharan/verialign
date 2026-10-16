@@ -1,5 +1,11 @@
-"""Interactive verification console for VeriAlign."""
+"""Interactive verification console for VeriAlign.
 
-from verialign.tui.app import VeriAlignTUI, run_tui
+The ``.app`` submodule (and ``textual``) are intentionally NOT imported here, so
+that ``import verialign.tui`` and ``import verialign.tui.data`` work in an
+environment without the optional ``tui`` extra installed. Callers read the
+data layer via ``verialign.tui.data`` and launch the app lazily with::
 
-__all__ = ["VeriAlignTUI", "run_tui"]
+    from verialign.tui.app import run_tui
+"""
+
+__all__ = ["data"]
