@@ -86,7 +86,8 @@ verialign/
 │       ├── test.yml                   # Run pytest on every PR
 │       └── deploy.yml                 # Deploy to fly.io / railway on push to main
 ├── pyproject.toml                     # Project metadata + dependencies
-└── requirements.txt                   # pip freeze
+├── LICENSE                            # MIT
+└── MANIFEST.in                        # sdist contents (excludes .env, *.sqlite3)
 ```
 
 ---

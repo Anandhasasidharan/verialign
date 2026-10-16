@@ -2,7 +2,7 @@
 
 > **Domain:** Alignment  
 > **Source Paper:** arXiv:2605.04454 — *Deployment-Relevant Alignment Cannot Be Inferred from Model-Level Evaluation Alone* (Vishwarupe, Shadbolt, Jirotka, Flechais — Oxford, May 2026)  
-> **Stack:** Python 3.12, FastAPI, SQLite/Postgres, Ruff, Docker, optional: Valkey, Sentry, OpenTelemetry
+> **Stack:** Python 3.11+, FastAPI, Textual (TUI), SQLite/Postgres, Ruff, Docker, optional: Valkey, Sentry, OpenTelemetry
 
 **One-command self-host:** `docker compose -f verialign/deploy/docker-compose.yml up -d` — a small, self-hostable **inline-verification** layer you can read end-to-end in an afternoon and run in one container. No sales call, no separate eval platform to cross-reference.
 
@@ -51,25 +51,61 @@ In-memory cache with SHA-256 exact-match + cosine similarity near-match (using `
                     └──────────────────┘
 ```
 
+## Install
+
+```bash
+pip install verialign          # proxy + the `verialign` CLI
+pip install "verialign[tui]"   # + interactive terminal console
+pipx install verialign         # if you only want the command
+```
+
+Extras: `nli` (hallucination model), `semantic` (embedding cache + re-scoring),
+`valkey`, `sentry`, `otel`, `tui`, `dashboard`, `migrate`, `all`.
+
 ## Quick Start
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env
-uvicorn verialign.proxy.main:app --reload
+pip install "verialign[tui]"
+cp .env.example .env        # optional: set an upstream provider (demo mode works without one)
+verialign seed --count 50   # optional: sample traces so the TUI has something to show
+verialign serve             # http://127.0.0.1:8000
 ```
 
-Optional features:
+Verification is available through the proxy, the console, or the CLI:
+
+| Command | What it does |
+|---------|--------------|
+| `verialign serve` | Run the proxy (`--host`, `--port`, `--workers`, `--reload`) |
+| `verialign tui` | Interactive verification console over stored traces |
+| `verialign verify --text "..."` | Verify one piece of text and print the report |
+| `verialign traces --min-trust 0.5` | Trace list for scripts (`--json`) |
+| `verialign migrate` | Apply database migrations (Postgres) |
+| `verialign seed --count 50` | Generate demo traces |
+
+From a source checkout:
 
 ```bash
-pip install -e ".[nli]"        # NLI hallucination detection (transformers + torch)
-pip install -e ".[semantic]"   # Embedding near-match cache + re-scoring (sentence-transformers, scikit-learn)
-pip install -e ".[valkey]"     # Valkey distributed cache (shared across workers)
-pip install -e ".[sentry]"     # Sentry error tracking
-pip install -e ".[otel]"       # OpenTelemetry instrumentation
-pip install -e ".[all]"        # Everything
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+verialign serve --reload
+```
+
+### TUI
+
+`verialign tui` opens a [Textual](https://textual.textualize.io/) console over the
+SQLite trace store: pick a run on the left, read its claim-level verification report —
+claims with status/confidence, contradictions, checklist and trust score — on the
+right.
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Move through traces |
+| `r` | Refresh the list |
+| `v` | Verify your own text against context |
+| `q` | Quit |
+
+```bash
+verialign tui --db ./verialign.sqlite3 --refresh 5
 ```
 
 Demo request without an upstream provider:
@@ -88,11 +124,15 @@ curl -s http://127.0.0.1:8000/v1/chat/completions \
   }'
 ```
 
-Dashboard (in another terminal):
+Dashboard (in another terminal — reads the SQLite trace store, so demo/self-host only):
 
 ```bash
+pip install "verialign[dashboard]"
 streamlit run verialign/dashboard/app.py
 ```
+
+For a Postgres trace store, note that the TUI reads a SQLite file: point `--db` at a
+SQLite export of your traces.
 
 ## Verification Response Shape
 
@@ -132,6 +172,8 @@ Every response includes a `verification` object:
 
 | Feature | Description |
 |---------|-------------|
+| **PyPI package + CLI** | `pip install verialign` → `verialign serve` / `verify` / `traces` / `tui` / `migrate` / `seed` |
+| **Terminal UI** | `verialign tui` — a Textual console for browsing claim-level verification reports |
 | **Provider routing** | OpenAI, Anthropic, local Ollama, any OpenAI-compatible endpoint |
 | **Cost-weighted routing** | Picks cheapest provider by model (16 model pricings) with preferred override |
 | **Cost tracking** | Per-request cost from upstream `usage` + model pricing table |
@@ -207,10 +249,18 @@ VeriAlign/
 ├── README.md
 ├── ROADMAP.md
 ├── AGENTS.md
+├── LICENSE
 ├── pyproject.toml
+├── MANIFEST.in
 ├── .env.example
-├── alembic/                              # DB migrations
+├── alembic.ini                           # dev convenience (migrations ship in the package)
 ├── verialign/
+│   ├── cli.py                            # `verialign` console entry point
+│   ├── __main__.py                       # `python -m verialign`
+│   ├── migrations/                       # Alembic migrations (packaged)
+│   ├── tui/
+│   │   ├── app.py                        # Textual console (`verialign tui`)
+│   │   └── data.py                       # Trace reading + Markdown rendering
 │   ├── proxy/
 │   │   ├── main.py                       # FastAPI entry point
 │   │   ├── admin.py                      # Admin API (/admin/*)
@@ -279,7 +329,8 @@ VeriAlign/
 ├── scripts/
 │   └── audit_saboteur.py                 # Top-level audit runner (CI)
 └── .github/workflows/
-    ├── test.yml                          # pytest + benchmarks + ruff + gitleaks
+    ├── test.yml                          # pytest (3.11/3.12) + benchmarks + ruff + gitleaks + build
+    ├── publish.yml                       # Trusted Publishing to TestPyPI + PyPI on tags
     └── deploy.yml
 ```
 
@@ -310,7 +361,7 @@ docker compose -f verialign/deploy/docker-compose.yml up -d
 # 1) cp .env.example .env && set VERIALIGN_PROXY_API_KEY, VERIALIGN_ADMIN_API_KEY, POSTGRES_PASSWORD, VERIALIGN_DOMAIN
 # 2) docker compose -f verialign/deploy/docker-compose.prod.yml up -d
 #    -> Caddy auto-TLS to https://your.domain, proxy + dashboard behind it
-#    -> alembic upgrade head runs on start, /health and /metrics behind allowlist
+#    -> verialign migrate runs on start, /health and /metrics behind allowlist
 
 # Fly.io / Railway
 flyctl launch && flyctl deploy  # or railway up

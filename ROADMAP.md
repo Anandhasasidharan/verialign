@@ -38,10 +38,18 @@ Production hardening
 - Trace persistence (SQLite / Postgres) with secret redaction
 - Admin API, Prometheus `/metrics`, structured logging, Sentry, OpenTelemetry
 - Docker Compose (demo + prod with Caddy TLS) + Alembic migrations
-- GitHub Actions: tests, benchmarks, ruff, gitleaks secret scan
+- GitHub Actions: tests (3.11/3.12), benchmarks, ruff, gitleaks secret scan, package build check
+
+Packaging & tooling
+
+- PyPI distribution (`pip install verialign`) with Trusted Publishing on tags
+- `verialign` CLI: `serve`, `verify`, `traces`, `tui`, `migrate`, `seed`
+- Textual terminal console (`verialign tui`) for browsing claim-level reports
+- Alembic migrations shipped inside the package (`verialign migrate`, no ini needed)
 
 ### Next ideas (not committed)
 
+- Let the TUI/CLI trace reader use `VERIALIGN_DATABASE_URL` (Postgres) instead of SQLite files only
 - Widen the calibration benchmark (compound claims, numeric + tool contradictions)
   and fail CI when ECE regresses > 0.05
 - Expose trust scores to a downstream SLO/agent-ops sink, reusing the tool-grounding primitive

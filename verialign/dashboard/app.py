@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from pathlib import Path
 
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-DB_PATH = Path("./verialign.sqlite3")
+DB_PATH = Path(os.getenv("VERIALIGN_DB_PATH", "./verialign.sqlite3"))
 
 
 @st.cache_data(ttl=30)

@@ -1,8 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "verialign"
-version = "0.1.0"
 description = "OpenAI-compatible verification support proxy for LLM outputs"
-requires-python = ">=3.10"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Anandhasasidharan" }]
+keywords = [
+    "llm",
+    "hallucination",
+    "verification",
+    "grounding",
+    "proxy",
+    "openai",
+    "nli",
+    "guardrails",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dynamic = ["version"]
 dependencies = [
     "fastapi>=0.111.0",
     "httpx>=0.27.0",
@@ -13,10 +41,22 @@ dependencies = [
     "sqlalchemy>=2.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Anandhasasidharan/verialign"
+Repository = "https://github.com/Anandhasasidharan/verialign"
+Issues = "https://github.com/Anandhasasidharan/verialign/issues"
+
+[project.scripts]
+verialign = "verialign.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.2.0",
     "pytest-asyncio>=0.23.0",
+    "ruff>=0.6.0",
+    "textual>=0.80",
+    "build>=1.2.0",
+    "twine>=5.1.0",
 ]
 async = [
     "sqlalchemy[asyncio]>=2.0.0",
@@ -38,16 +78,33 @@ semantic = [
     "sentence-transformers>=3.0.0",
     "scikit-learn>=1.4.0",
 ]
-all = [
-    "verialign[dev,async,valkey,sentry,otel,nli,semantic]",
+# Interactive terminal verification console.
+tui = ["textual>=0.80"]
+# Streamlit trace dashboard.
+dashboard = [
+    "streamlit>=1.35",
+    "pandas>=2.0",
 ]
+migrate = ["alembic>=1.13"]
+all = [
+    "verialign[async,valkey,sentry,otel,nli,semantic,tui,dashboard,migrate]",
+]
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 include = ["verialign*"]
 
+[tool.setuptools.package-data]
+"verialign.migrations" = ["script.py.mako"]
+
+[tool.setuptools.dynamic]
+version = { attr = "verialign.__version__" }
+
 [tool.ruff]
 line-length = 100
-target-version = "py312"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F"]

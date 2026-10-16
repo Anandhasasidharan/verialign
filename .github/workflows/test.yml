@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
 
     steps:
       - name: Checkout code
@@ -17,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: "pip"
 
       - name: Install dependencies
@@ -68,6 +72,43 @@ jobs:
           ruff check verialign/ tests/
           ruff format --check verialign/ tests/
 
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+
+      - name: Validate metadata
+        run: twine check dist/*
+
+      - name: Ensure no local state or secrets leak into the artifacts
+        run: |
+          set -e
+          if tar -tzf dist/*.tar.gz | grep -E '(^|/)\.env$|\.sqlite3$|\.db$'; then
+            echo "Refusing to publish: sdist contains local state";
+            exit 1;
+          fi
+          python -c "import zipfile,glob,sys; names=zipfile.ZipFile(glob.glob('dist/*.whl')[0]).namelist(); bad=[n for n in names if n.endswith(('.sqlite3','.db')) or n.endswith('/.env')]; print('wheel bad entries:', bad); sys.exit(1 if bad else 0)"
+
+      - name: Install the built wheel and smoke-test the CLI
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install --quiet dist/*.whl
+          /tmp/venv/bin/verialign --version
+          /tmp/venv/bin/verialign --help
+          /tmp/venv/bin/python -c "import verialign.migrations, verialign.tui.data"
+
   secret-scan:
     runs-on: ubuntu-latest
     steps:
@@ -79,4 +120,3 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

@@ -64,20 +64,11 @@ services:
         reservations:
           memory: 256M
     command: >
-      sh -c "alembic upgrade head && uvicorn verialign.proxy.main:app --host 0.0.0.0 --port 8000 --workers 4"
+      sh -c "verialign migrate && verialign serve --host 0.0.0.0 --port 8000 --workers 4"
 
-  dashboard:
-    build:
-      context: ../..
-      dockerfile: verialign/deploy/Dockerfile.dashboard
-    environment:
-      VERIALIGN_DATABASE_URL: postgresql+asyncpg://verialign:${POSTGRES_PASSWORD:-change-me}@postgres:5432/verialign
-      VERIALIGN_DB_PATH: /data/verialign.sqlite3
-    depends_on:
-      - proxy
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8501:8501"
+  # NOTE: the Streamlit dashboard reads the SQLite trace store only, so it is not
+  # part of the Postgres production stack. Use `verialign tui` against the DB, or
+  # the demo compose file, to inspect traces.
 
   caddy:
     image: caddy:2-alpine

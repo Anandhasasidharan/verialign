@@ -7,13 +7,13 @@
 cd verialign
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # Initialize database (if not using demo's auto-create)
-alembic upgrade head
+verialign migrate
 
 # Run in demo mode (no API keys needed)
-uvicorn verialign.proxy.main:app --reload
+verialign serve --reload
 
 # In another terminal, run dashboard
 streamlit run verialign/dashboard/app.py
@@ -26,23 +26,28 @@ Visit:
 
 ## Database Migrations
 
-Alembic manages the database schema. Run migrations after every update:
+Alembic manages the database schema, and the migrations are shipped inside the
+package (`verialign/migrations/`). `verialign migrate` builds the Alembic config in
+code, so an installed copy needs no checkout and no `alembic.ini`:
 
 ```bash
 # Apply pending migrations
-alembic upgrade head
+verialign migrate
 
-# Check current version
+# A different target database
+verialign migrate --database-url "postgresql+asyncpg://user:pw@host:5432/verialign"
+```
+
+From a source checkout you can still drive Alembic directly (`alembic.ini` points at
+`verialign/migrations`):
+
+```bash
 alembic current
-
-# View migration history
 alembic history
-
-# Rollback one step (if needed)
 alembic downgrade -1
 ```
 
-The first time you start VeriAlign, the schema is auto-created for demo/dev. In production, always run `alembic upgrade head` explicitly before starting services.
+The first time you start VeriAlign, the schema is auto-created for demo/dev. In production, always run `verialign migrate` explicitly before starting services.
 
 ## Docker Compose (Recommended for Production)
 
@@ -139,10 +144,10 @@ git clone <your-repo> /opt/verialign
 cd /opt/verialign
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 
 # Run database migrations
-alembic upgrade head
+verialign migrate
 
 # Create .env
 cp .env.example .env
@@ -287,7 +292,7 @@ export VERIALIGN_DATABASE_URL="postgresql+asyncpg://user:password@host:5432/veri
 
 # Initialize schema (auto-created on first startup when using AsyncTraceStore)
 # Run migrations
-alembic upgrade head
+verialign migrate
 ```
 
 The async store uses a connection pool (size=10, overflow=20) and supports the same trace/health/query operations as the SQLite store.

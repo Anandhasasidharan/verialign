@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 import sqlite3
@@ -112,60 +113,63 @@ TASK_CATEGORIES = [
 ]
 
 
-def generate_verification_data(prompt: str, response: str, context: list) -> dict:
+async def generate_verification_data(prompt: str, response: str, context: list) -> dict:
+    from dataclasses import replace
+
     from verialign.verification.checklist_generator import ChecklistGenerator
     from verialign.verification.claim_extractor import ClaimExtractor
     from verialign.verification.contradiction_detector import ContradictionDetector
+    from verialign.verification.models import VerificationResult, VerifiedClaim
     from verialign.verification.source_grounder import SourceGrounder
+    from verialign.verification.trust_scorer import TrustScorer
 
     claim_extractor = ClaimExtractor()
-    source_grounder = SourceGrounder()
+    # Demo seeding must stay fast and offline: skip NLI + embedding models.
+    source_grounder = SourceGrounder(use_nli=False, use_semantic=False)
     contradiction_detector = ContradictionDetector()
     checklist_generator = ChecklistGenerator()
 
-    claims = []
-    claim_texts = claim_extractor.extract(response)
+    claim_texts = await claim_extractor.extract(response)
 
+    claims: list[VerifiedClaim] = []
     for idx, claim_text in enumerate(claim_texts):
-        status, confidence, sources = source_grounder.ground(claim_text, context)
+        status, confidence, sources = await source_grounder.ground(claim_text, context)
         claims.append(
-            {
-                "text": claim_text,
-                "status": status,
-                "confidence": round(confidence, 3),
-                "sources": [
-                    {"source_id": s.source_id, "score": s.score, "excerpt": s.excerpt}
-                    for s in sources
-                ],
-                "claim_id": f"claim-{idx}",
-                "sentence_offset": idx,
-            },
+            VerifiedClaim(
+                text=claim_text,
+                status=status,
+                confidence=round(confidence, 3),
+                sources=sources,
+                claim_id=f"claim-{idx}",
+                sentence_offset=idx,
+            ),
         )
 
     contradictions = contradiction_detector.detect(claim_texts)
-    contradiction_dicts = [c.to_dict() for c in contradictions]
+    checklist = checklist_generator.generate(
+        response,
+        claim_texts,
+        [claim.to_dict() for claim in claims],
+    )
 
-    checklist = checklist_generator.generate(response, claim_texts, claims)
-    checklist_dicts = [item.to_dict() for item in checklist]
-
-    return {
-        "claims": claims,
-        "contradictions": contradiction_dicts,
-        "checklist": checklist_dicts,
-        "summary": {
-            "total_claims": len(claims),
-            "supported": sum(1 for c in claims if c["status"] == "supported"),
-            "unsupported": sum(1 for c in claims if c["status"] == "unsupported"),
-            "unclear": sum(1 for c in claims if c["status"] == "unclear"),
-            "partially_supported": sum(1 for c in claims if c["status"] == "partially_supported"),
-            "contradictions_found": len(contradictions),
-            "checklist_items": len(checklist),
-        },
-    }
+    # Build the real model so seeded traces match the production schema exactly
+    # (including summary/profile/trust_score) instead of a hand-rolled dict.
+    result = VerificationResult(
+        claims=claims,
+        contradictions=contradictions,
+        checklist=checklist,
+    )
+    result = replace(result, trust_score=TrustScorer().score(result))
+    return result.to_dict()
 
 
-def create_sample_traces(count: int = 100) -> None:
-    conn = sqlite3.connect(DB_PATH)
+def create_sample_traces(count: int = 100, db_path: str = DB_PATH) -> None:
+    """Generate ``count`` synthetic traces for demos and the TUI."""
+    asyncio.run(_create_sample_traces(count, db_path))
+
+
+async def _create_sample_traces(count: int, db_path: str) -> None:
+    conn = sqlite3.connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS traces (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -232,7 +236,7 @@ def create_sample_traces(count: int = 100) -> None:
             },
         }
 
-        verification = generate_verification_data(prompt, response, context)
+        verification = await generate_verification_data(prompt, response, context)
         response_payload["verification"] = verification
 
         rows.append(

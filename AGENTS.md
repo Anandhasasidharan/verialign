@@ -3,11 +3,14 @@
 ## Commands
 - `python3 -m pytest -x --no-header -q` — run all tests
 - `python3 -m pytest tests/ -x --no-header -q -k <keyword>` — run specific test
-- `python3 -m verialign.proxy.main` — start proxy
+- `python3 -m verialign serve --reload` — start proxy (same as `verialign serve`)
+- `python3 -m verialign seed --db /tmp/x.sqlite3 --count 20` — sample traces for the TUI
+- `python3 -m verialign tui --db /tmp/x.sqlite3` — interactive verification console
+- `python3 -m ruff check verialign/ tests/ && python3 -m ruff format --check verialign/ tests/` — lint
 - `git log --oneline -10` — recent commits
 
 ## Architecture
-- FastAPI proxy at `verialign/proxy/main.py`
+- FastAPI proxy at `verialign/proxy/main.py`; console entry point at `verialign/cli.py`
 - Two deployments: proxy-only (NLI optional) and full (all features)
 - Safety: PII redaction (Luhn-checked CC), jailbreak detection, toxicity guard (word-boundary)
 - CORS defaults to empty origins (opt-in). Credentials only for non-wildcard origins.
@@ -27,3 +30,8 @@
 - Credit card redaction requires valid Luhn checksum
 - Circuit breakers use lazy imports in `provider_router.py` to avoid circular deps
 - `send_alert()` is fire-and-forget (`asyncio.create_task()`)
+- Version is single-sourced: `verialign/__init__.py` `__version__` → `pyproject.toml` `dynamic = ["version"]`
+- Migrations live in `verialign/migrations/` (packaged). `alembic.ini` is a dev convenience only; `verialign migrate` builds the Alembic config in code so installed users need no ini
+- `verialign tui` needs the `tui` extra (`textual`); `verialign/cli.py` imports it lazily and `verialign/tui/data.py` must stay Textual-free
+- `verialign/scripts/seed_data.py` is async-driven (`asyncio.run` wrapper) and deliberately disables NLI/embeddings so seeding stays fast and offline
+- `.env`, `*.sqlite3`, `*.db` must never enter the sdist/wheel — enforced by `MANIFEST.in` and the `package` CI job
