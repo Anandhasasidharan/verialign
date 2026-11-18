@@ -23,7 +23,9 @@ class WebGrounder:
     def is_available(self) -> bool:
         return bool(self.api_key)
 
-    async def ground(self, claim: str, max_results: int = 3) -> list[SourceMatch]:
+    async def ground(
+        self, claim: str, max_results: int = 3, *, raise_on_error: bool = False
+    ) -> list[SourceMatch]:
         if not self.api_key:
             return []
 
@@ -39,7 +41,9 @@ class WebGrounder:
             self._cache[cache_key] = (time.monotonic(), results)
             return results
         except Exception:
-            logger.exception("web_search_failed", extra={"claim": claim[:80]})
+            logger.warning("web_search_failed")
+            if raise_on_error:
+                raise
             return []
 
     async def _search(self, claim: str, max_results: int) -> list[SourceMatch]:

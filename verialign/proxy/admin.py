@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hmac
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,14 +17,14 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
 
 
-def verify_admin(api_key: str = Depends(admin_key_header)) -> None:
+def verify_admin(api_key: str | None = Depends(admin_key_header)) -> None:
     settings = get_settings()
     if not settings.admin_api_key:
         raise HTTPException(
             status_code=503,
             detail="Admin API is disabled: set VERIALIGN_ADMIN_API_KEY to enable it.",
         )
-    if api_key != settings.admin_api_key:
+    if not hmac.compare_digest((api_key or "").encode(), settings.admin_api_key.encode()):
         raise HTTPException(status_code=403, detail="Invalid admin key")
 
 
@@ -36,7 +37,7 @@ class PricingUpdate(BaseModel):
 @router.put("/pricing", dependencies=[Depends(verify_admin)])
 async def update_pricing(update: PricingUpdate) -> dict:
     update_model_pricing(update.model, update.input_price, update.output_price)
-    logger.info("admin_pricing_updated", extra={"model": update.model})
+    logger.info("admin_pricing_updated")
     return {
         "status": "ok",
         "model": update.model,
@@ -55,7 +56,11 @@ async def list_providers() -> dict:
 
     settings = get_settings()
     router_inst = ProviderRouter(settings)
-    return {"providers": router_inst.get_configured_providers()}
+    return {
+        "providers": [
+            provider.get_provider_name() for provider in router_inst.get_configured_providers()
+        ]
+    }
 
 
 @router.get("/traces", dependencies=[Depends(verify_admin)])

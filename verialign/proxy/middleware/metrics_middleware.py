@@ -52,14 +52,15 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             raise
         finally:
             elapsed = time.monotonic() - start
+            endpoint = getattr(request.scope.get("route"), "path", "unmatched")
             request_count.labels(
                 method=request.method,
-                endpoint=request.url.path,
+                endpoint=endpoint,
                 status=status,
             ).inc()
             request_latency.labels(
                 method=request.method,
-                endpoint=request.url.path,
+                endpoint=endpoint,
             ).observe(elapsed)
 
 

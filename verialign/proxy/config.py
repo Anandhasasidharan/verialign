@@ -4,6 +4,13 @@ from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from verialign.verification.engine import (
+    DEFAULT_CLAIM_TIMEOUT_MS,
+    DEFAULT_CONCURRENCY,
+    DEFAULT_MAX_CLAIMS,
+    DEFAULT_MAX_MS,
+)
+
 SQLITE_DEFAULT = "sqlite:///./verialign.sqlite3"
 
 
@@ -77,6 +84,10 @@ class Settings(BaseSettings):
     valkey_url: str | None = Field(default=None, alias="VERIALIGN_VALKEY_URL")
     sentry_dsn: str | None = Field(default=None, alias="VERIALIGN_SENTRY_DSN")
     enable_otel: bool = Field(default=False, alias="VERIALIGN_ENABLE_OTEL")
+    agentops_traces_endpoint: str | None = Field(
+        default=None, alias="VERIALIGN_AGENTOPS_TRACES_ENDPOINT"
+    )
+    agentops_api_key: str | None = Field(default=None, alias="VERIALIGN_AGENTOPS_API_KEY")
     admin_api_key: str | None = Field(default=None, alias="VERIALIGN_ADMIN_API_KEY")
     safety_jailbreak_enabled: bool = Field(
         default=True,
@@ -105,6 +116,20 @@ class Settings(BaseSettings):
     block_threshold: float = Field(default=0.5, alias="VERIALIGN_BLOCK_THRESHOLD")
     use_rescoring: bool = Field(default=False, alias="VERIALIGN_USE_RESCORING")
     use_nli: bool = Field(default=True, alias="VERIALIGN_USE_NLI")
+    use_llm_extractor: bool = Field(default=False, alias="VERIALIGN_USE_LLM_EXTRACTOR")
+    llm_extractor_model: str | None = Field(default=None, alias="VERIALIGN_LLM_EXTRACTOR_MODEL")
+    verification_max_claims: int = Field(
+        default=DEFAULT_MAX_CLAIMS, ge=1, le=128, alias="VERIALIGN_VERIFICATION_MAX_CLAIMS"
+    )
+    verification_max_ms: int = Field(
+        default=DEFAULT_MAX_MS, ge=1, alias="VERIALIGN_VERIFICATION_MAX_MS"
+    )
+    verification_claim_timeout_ms: int = Field(
+        default=DEFAULT_CLAIM_TIMEOUT_MS, ge=1, alias="VERIALIGN_VERIFICATION_CLAIM_TIMEOUT_MS"
+    )
+    verification_concurrency: int = Field(
+        default=DEFAULT_CONCURRENCY, ge=1, le=16, alias="VERIALIGN_VERIFICATION_CONCURRENCY"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -55,6 +55,8 @@ class AsyncTraceStore:
         response_to_store = (
             redact_sensitive_data(response_payload) if self.redact else response_payload
         )
+        model = str(request_payload.get("model", ""))
+        report = verification.to_dict()
 
         session_factory = self._get_session_factory()
         async with session_factory() as session:
@@ -62,10 +64,10 @@ class AsyncTraceStore:
 
             trace = Trace(
                 created_at=datetime.now(timezone.utc),
-                model=str(request_payload.get("model", "")),
+                model=redact_sensitive_data(model) if self.redact else model,
                 request_json=request_to_store,
                 response_json=response_to_store,
-                verification_json=verification.to_dict(),
+                verification_json=redact_sensitive_data(report) if self.redact else report,
             )
             session.add(trace)
             await session.commit()
@@ -117,7 +119,7 @@ class AsyncTraceStore:
                     "summary": verification_data.get("summary", {}),
                 },
             )
-        return traces
+        return redact_sensitive_data(traces) if self.redact else traces
 
     async def close(self) -> None:
         if self._engine is not None:

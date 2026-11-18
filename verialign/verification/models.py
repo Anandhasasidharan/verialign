@@ -6,13 +6,17 @@ class SourceMatch:
     source_id: str
     score: float
     excerpt: str
+    refutes: bool = False
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "source_id": self.source_id,
             "score": self.score,
             "excerpt": self.excerpt,
         }
+        if self.refutes:
+            result["refutes"] = True
+        return result
 
 
 @dataclass(frozen=True)
@@ -78,6 +82,8 @@ class VerificationResult:
     cost: float | None = None
     trust_score: float | None = None
     scaffold: str = SCAFFOLD_VERSION
+    incomplete: bool = False
+    skipped_claims: int = 0
 
     @property
     def summary(self) -> dict:
@@ -116,6 +122,10 @@ class VerificationResult:
             "summary": self.summary,
             "profile": self.profile,
         }
+        if self.incomplete:
+            d["incomplete"] = True
+        if self.skipped_claims:
+            d["skipped_claims"] = self.skipped_claims
         if self.cost is not None:
             d["cost"] = self.cost
         if self.trust_score is not None:

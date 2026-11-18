@@ -1,11 +1,14 @@
 import contextvars
 import json
 import logging
+import re
 import uuid
 from datetime import datetime, timezone
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+
+from verialign.privacy import redact_text
 
 RESERVED_ATTRS = {
     "args",
@@ -37,6 +40,7 @@ request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar(
     "request_id",
     default="",
 )
+_REQUEST_ID = re.compile(r"[A-Za-z0-9_-]{1,64}\Z")
 
 
 def get_request_id() -> str:
@@ -61,8 +65,19 @@ class JsonFormatter(logging.Formatter):
             if key not in RESERVED_ATTRS and not key.startswith("_"):
                 log_entry[key] = value
         if record.exc_info and record.exc_info[0]:
-            log_entry["exception"] = self.formatException(record.exc_info)
+            log_entry["exception"] = record.exc_info[0].__name__
         return json.dumps(log_entry, default=str)
+
+
+class _ServerExceptionFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.exc_info:
+            record.exc_info = None
+            record.exc_text = None
+        return True
+
+
+_server_exception_filter = _ServerExceptionFilter()
 
 
 def configure_logging() -> None:
@@ -73,11 +88,19 @@ def configure_logging() -> None:
     logging.root.setLevel(logging.INFO)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
+    # The server access format includes the raw URL, including query parameters.
+    logging.getLogger("uvicorn.access").disabled = True
+    logging.getLogger("uvicorn.error").addFilter(_server_exception_filter)
 
 
 class CorrelationIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        request_id = request.headers.get("X-Request-ID", uuid.uuid4().hex[:12])
+        provided = request.headers.get("X-Request-ID", "")
+        request_id = (
+            provided
+            if _REQUEST_ID.fullmatch(provided) and redact_text(provided) == provided
+            else uuid.uuid4().hex[:12]
+        )
         request.state.request_id = request_id
         token = request_id_var.set(request_id)
         try:

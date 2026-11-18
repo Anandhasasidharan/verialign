@@ -129,11 +129,11 @@ def test_trace_persistence(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
-    monkeypatch.delenv("VERIALIGN_PROXY_API_KEY", raising=False)
+    monkeypatch.setenv("VERIALIGN_PROXY_API_KEY", "trace-client")
     monkeypatch.delenv("VERIALIGN_REQUIRE_PROXY_AUTH", raising=False)
     get_settings.cache_clear()
 
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer trace-client"})
 
     client.post(
         "/v1/chat/completions",
@@ -159,11 +159,11 @@ def test_multiple_requests_maintain_state(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("VERIALIGN_DB_PATH", str(tmp_path / "traces.sqlite3"))
     monkeypatch.delenv("VERIALIGN_UPSTREAM_BASE_URL", raising=False)
     monkeypatch.delenv("VERIALIGN_UPSTREAM_API_KEY", raising=False)
-    monkeypatch.delenv("VERIALIGN_PROXY_API_KEY", raising=False)
+    monkeypatch.setenv("VERIALIGN_PROXY_API_KEY", "trace-client")
     monkeypatch.delenv("VERIALIGN_REQUIRE_PROXY_AUTH", raising=False)
     get_settings.cache_clear()
 
-    client = TestClient(app)
+    client = TestClient(app, headers={"Authorization": "Bearer trace-client"})
 
     for i in range(3):
         response = client.post(

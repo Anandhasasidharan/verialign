@@ -1,3 +1,5 @@
+import asyncio
+import hmac
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -11,7 +13,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from fastapi.security import APIKeyHeader
 
 from verialign.proxy.admin import router as admin_router
-from verialign.proxy.config import get_settings
+from verialign.proxy.config import Settings, get_settings
 from verialign.proxy.middleware.body_size_limit import RequestBodySizeLimitMiddleware
 from verialign.proxy.middleware.logging_middleware import (
     CorrelationIdMiddleware,
@@ -31,10 +33,12 @@ from verialign.proxy.middleware.request_handler import (
     build_upstream_payload,
     validate_request,
 )
-from verialign.proxy.middleware.request_timeout import RequestTimeoutMiddleware
+from verialign.proxy.middleware.request_timeout import RequestTimeoutMiddleware, verification_window
 from verialign.proxy.middleware.response_handler import ResponseHandler
 from verialign.proxy.middleware.safety_middleware import SafetyMiddleware
+from verialign.proxy.middleware.stream_redaction import ChatStreamRedactor
 from verialign.proxy.otel_genai import emit_genai_span
+from verialign.proxy.otel_metrics import Operation, create_telemetry
 from verialign.proxy.routing.cost_model import calculate_cost
 from verialign.proxy.routing.fallback import with_fallback
 from verialign.proxy.routing.provider_router import (
@@ -46,7 +50,10 @@ from verialign.storage.async_trace_store import AsyncTraceStore
 from verialign.storage.store_factory import create_trace_store
 from verialign.verification.alerting import send_alert
 from verialign.verification.engine import VerificationEngine
+from verialign.verification.models import VerificationResult
+from verialign.verification.overlay import Overlay, PolicyAction
 from verialign.verification.valkey_cache import ValkeyCache
+from verialign.verification.workers import verification_workers
 
 if TYPE_CHECKING:
     from verialign.storage.trace_store import TraceStore
@@ -68,26 +75,6 @@ async def lifespan(app: FastAPI):
         except Exception:
             logger.exception("sentry_init_failed")
 
-    if settings.enable_otel:
-        try:
-            from opentelemetry import trace
-            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-                OTLPSpanExporter,
-            )
-            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-            from opentelemetry.sdk.resources import Resource
-            from opentelemetry.sdk.trace import TracerProvider
-            from opentelemetry.sdk.trace.export import BatchSpanProcessor
-
-            provider = TracerProvider(
-                resource=Resource.create({"service.name": "verialign"}),
-            )
-            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-            trace.set_tracer_provider(provider)
-            FastAPIInstrumentor.instrument_app(app)
-            logger.info("otel_initialized")
-        except Exception:
-            logger.exception("otel_init_failed")
     limiter = RateLimiter(
         RateLimitConfig(
             requests_per_minute=settings.rate_limit_requests_per_minute,
@@ -110,7 +97,7 @@ async def lifespan(app: FastAPI):
                 },
             )
 
-    logger.info("server_started", extra={"settings": self_sanitize(settings)})
+    logger.info("server_started")
 
     store = create_trace_store(
         settings.database_url,
@@ -122,7 +109,7 @@ async def lifespan(app: FastAPI):
     app.state.trace_store = store
 
     if settings.valkey_url:
-        app.state.cache = ValkeyCache()
+        app.state.cache = await asyncio.to_thread(ValkeyCache, url=settings.valkey_url)
         try:
             from valkey import Valkey
 
@@ -133,40 +120,91 @@ async def lifespan(app: FastAPI):
     else:
         app.state.cache = None
 
-    yield
+    telemetry = instrumentor = None
+    app.state.verification_telemetry = None
+    if settings.enable_otel:
+        try:
+            from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-    if isinstance(app.state.trace_store, AsyncTraceStore):
-        await app.state.trace_store.close()
-    await close_http_client()
-    logger.info("server_stopped")
+            telemetry = create_telemetry(
+                settings.agentops_traces_endpoint, settings.agentops_api_key
+            )
+            app.state.verification_telemetry = telemetry
+            FastAPIInstrumentor.instrument_app(
+                app,
+                tracer_provider=telemetry.tracer_provider,
+                meter_provider=telemetry.meter_provider,
+            )
+            instrumentor = FastAPIInstrumentor
+            logger.info("otel_initialized")
+        except Exception:
+            logger.warning("otel_init_failed")
+
+    try:
+        yield
+    finally:
+        app.state.verification_telemetry = None
+        if instrumentor:
+            instrumentor.uninstrument_app(app)
+        if telemetry:
+            await asyncio.to_thread(telemetry.shutdown)
+        if isinstance(app.state.trace_store, AsyncTraceStore):
+            await app.state.trace_store.close()
+        await close_http_client()
+        logger.info("server_stopped")
 
 
-def self_sanitize(settings) -> dict:
-    s = settings.model_dump()
-    for key in ("upstream_api_key", "proxy_api_key"):
-        if s.get(key):
-            s[key] = "***"
-    return s
+def _build_llm_client(router: ProviderRouter, model: str):
+    if not router.get_configured_providers():
+        return None
+
+    async def llm_client(payload: dict) -> dict:
+        resp = await router.chat_completions({**payload, "model": model})
+        return resp.data
+
+    return llm_client
 
 
-def _build_llm_client(router: ProviderRouter):
-    providers = router.get_configured_providers()
-    if providers:
-        provider = providers[0]
-
-        async def llm_client(payload: dict) -> dict:
-            resp = await provider.chat_completions(payload)
-            return resp.data
-
-        return llm_client
-    return None
+def _create_verifier(
+    router: ProviderRouter,
+    settings: Settings,
+    seconds: float,
+    request_scope: object,
+    request_model: str | None,
+) -> VerificationEngine:
+    extractor_model = settings.llm_extractor_model or request_model
+    return VerificationEngine(
+        llm_client=(
+            _build_llm_client(router, extractor_model)
+            if settings.use_llm_extractor and extractor_model
+            else None
+        ),
+        web_api_key=settings.web_search_api_key,
+        web_provider=settings.web_search_provider,
+        cache=getattr(app.state, "cache", None),
+        use_rescoring=settings.use_rescoring,
+        use_nli=settings.use_nli,
+        max_claims=settings.verification_max_claims,
+        # Reserve a short window for returning completed claims before the hard boundary.
+        max_ms=(seconds - min(0.010, seconds * 0.1)) * 1000,
+        claim_timeout_ms=settings.verification_claim_timeout_ms,
+        concurrency=settings.verification_concurrency,
+        request_scope=request_scope,
+        llm_extractor_model=extractor_model if settings.use_llm_extractor else None,
+    )
 
 
 app = FastAPI(title="VeriAlign", version="0.1.0", lifespan=lifespan)
 
 settings_at_startup = get_settings()
 
-app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(
+    SafetyMiddleware,
+    pii_redact=settings_at_startup.safety_pii_redact_enabled,
+    jailbreak_block=settings_at_startup.safety_jailbreak_enabled,
+    toxicity_block=settings_at_startup.safety_toxicity_enabled,
+    max_body_size=settings_at_startup.max_request_body_size,
+)
 app.add_middleware(
     RequestBodySizeLimitMiddleware,
     max_size=settings_at_startup.max_request_body_size,
@@ -176,6 +214,7 @@ app.add_middleware(
     timeout_seconds=settings_at_startup.proxy_timeout_seconds,
 )
 app.add_middleware(MetricsMiddleware)
+app.add_middleware(CorrelationIdMiddleware)
 origins = settings_at_startup.cors_allowed_origins
 app.add_middleware(
     CORSMiddleware,
@@ -184,56 +223,74 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(
-    SafetyMiddleware,
-    pii_redact=settings_at_startup.safety_pii_redact_enabled,
-    jailbreak_block=settings_at_startup.safety_jailbreak_enabled,
-    toxicity_block=settings_at_startup.safety_toxicity_enabled,
-)
 app.include_router(admin_router)
 
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 
-def verify_proxy_auth(api_key: str = Depends(api_key_header)) -> None:
-    settings = get_settings()
-    if settings.require_proxy_auth and settings.proxy_api_key:
-        provided = api_key.replace("Bearer ", "") if api_key else ""
-        if provided != settings.proxy_api_key:
-            raise HTTPException(
-                status_code=401,
-                detail={
-                    "error": {
-                        "message": "Invalid or missing API key",
-                        "type": "auth_error",
-                        "status_code": 401,
-                    },
+def _bearer_key(authorization: str | None) -> str:
+    scheme, _, key = (authorization or "").partition(" ")
+    return key if scheme.lower() == "bearer" else ""
+
+
+def _check_proxy_key(configured: str | None, authorization: str | None) -> None:
+    if not configured:
+        raise HTTPException(status_code=503, detail="Proxy API key is not configured")
+    key = _bearer_key(authorization)
+    if not hmac.compare_digest(key.encode(), configured.encode()):
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": {
+                    "message": "Invalid or missing API key",
+                    "type": "auth_error",
+                    "status_code": 401,
                 },
-            )
+            },
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+def verify_proxy_auth(api_key: str | None = Depends(api_key_header)) -> None:
+    settings = get_settings()
+    if (
+        settings.proxy_api_key
+        or settings.require_proxy_auth
+        or settings.web_search_api_key
+        or ProviderRouter(settings).get_configured_providers()
+    ):
+        _check_proxy_key(settings.proxy_api_key, api_key)
+
+
+def verify_trace_auth(api_key: str | None = Depends(api_key_header)) -> None:
+    _check_proxy_key(get_settings().proxy_api_key, api_key)
+
+
+async def _read_json_object(request: Request) -> dict:
+    try:
+        payload = await request.json()
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise HTTPException(status_code=400, detail="Invalid JSON object") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Expected a JSON object")
+    return payload
 
 
 @app.get("/health")
 async def health() -> dict:
     db_ok = False
     try:
-        store: AsyncTraceStore | TraceStore = getattr(app.state, "trace_store", None)
-        if store is None:
-            settings = get_settings()
-            store = create_trace_store(
-                settings.database_url,
-                settings.db_path,
-                settings.redact_traces,
-            )
-        await _ensure_list_recent(store)
+        async with asyncio.timeout(1):
+            store = await verification_workers.run(_get_store)
+            await _ensure_list_recent(store)
         db_ok = True
     except Exception:
-        logger.exception("health_check_db_failed")
+        logger.warning("health_check_db_failed")
 
     settings = get_settings()
     upstream_ok = False
-    router = ProviderRouter(settings)
     try:
-        upstream_ok = len(router.get_configured_providers()) > 0
+        upstream_ok = len(ProviderRouter(settings).get_configured_providers()) > 0
     except Exception:
         logger.exception("health_check_upstream_failed")
 
@@ -248,11 +305,25 @@ async def _ensure_list_recent(store) -> None:
     if isinstance(store, AsyncTraceStore):
         await store.list_recent(1)
     else:
-        store.list_recent(1)
+        await verification_workers.run(store.list_recent, 1)
+
+
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    state = await health()
+    settings = get_settings()
+    if not settings.proxy_api_key and (
+        settings.require_proxy_auth or settings.web_search_api_key or state["upstream_configured"]
+    ):
+        return JSONResponse(
+            content={**state, "status": "degraded", "auth": "missing_proxy_key"},
+            status_code=503,
+        )
+    return JSONResponse(content=state, status_code=200 if state["database"] == "ok" else 503)
 
 
 def _get_store():
-    store = getattr(app.state, "trace_store", None)
+    store: AsyncTraceStore | TraceStore | None = getattr(app.state, "trace_store", None)
     if store is None:
         settings = get_settings()
         store = create_trace_store(
@@ -267,7 +338,51 @@ async def _write_trace(store, request_payload, response_payload, verification) -
     if isinstance(store, AsyncTraceStore):
         await store.write_trace(request_payload, response_payload, verification)
     else:
-        store.write_trace(request_payload, response_payload, verification)
+        await verification_workers.run(
+            store.write_trace, request_payload, response_payload, verification
+        )
+
+
+async def _save_trace(request_payload, response_payload, verification) -> None:
+    try:
+        async with asyncio.timeout(0.25):
+            store = await verification_workers.run(_get_store)
+            await _write_trace(store, request_payload, response_payload, verification)
+    except Exception:
+        logger.warning("chat_trace_write_failed")
+
+
+def _record_verification(
+    request_payload: dict,
+    response_payload: dict,
+    verification: VerificationResult,
+    operation: Operation,
+    policy_action: PolicyAction = "pass-through",
+    provider: str | None = None,
+) -> None:
+    telemetry = getattr(app.state, "verification_telemetry", None)
+    if telemetry is None or verification.incomplete or verification.trust_score is None:
+        return
+    try:
+        score = verification.trust_score
+        telemetry.record(score, operation, policy_action)
+        summary = verification.summary
+        emit_genai_span(
+            request_payload,
+            response_payload,
+            provider,
+            trust_score=score,
+            trust_components={
+                "supported": summary["supported"],
+                "unsupported": summary["unsupported"],
+                "contradictions": summary["contradictions_found"],
+                "checklist": summary["checklist_items"],
+            },
+            operation=operation,
+            tracer=telemetry.tracer,
+        )
+    except Exception:
+        logger.warning("verification_telemetry_failed")
 
 
 @app.get("/metrics")
@@ -278,7 +393,7 @@ async def metrics() -> Response:
 @app.get("/traces")
 async def traces(
     limit: Annotated[int, Query(ge=1, le=100)] = 25,
-    _: None = Depends(verify_proxy_auth),
+    _: None = Depends(verify_trace_auth),
 ) -> dict:
     store = _get_store()
     if isinstance(store, AsyncTraceStore):
@@ -287,29 +402,26 @@ async def traces(
 
 
 async def _handle_streaming(
-    validated,
     payload: dict,
+    request_payload: dict,
     router: ProviderRouter,
-    rate_limiter,
-    client_ip: str,
-    settings,
+    settings: Settings,
 ):
     rid = get_request_id()
 
     async def event_stream() -> AsyncIterator[str]:
         full_content_parts: list[str] = []
-        first = True
-
+        response_type = (request_payload.get("response_format") or {}).get("type")
+        redactor = (
+            ChatStreamRedactor(structured=response_type in {"json_object", "json_schema"})
+            if settings.safety_pii_redact_enabled
+            else None
+        )
         async for chunk in router.chat_completions_stream(payload):
             if isinstance(chunk, dict):
                 chunk["usage"] = None
-                line = f"data: {json.dumps(chunk)}\n\n"
-                if first:
-                    yield line
-                    first = False
-                else:
-                    yield line
-
+                for output in redactor.feed(chunk) if redactor else (chunk,):
+                    yield f"data: {json.dumps(output)}\n\n"
                 choices = chunk.get("choices", [])
                 for choice in choices:
                     delta = choice.get("delta", {})
@@ -317,59 +429,35 @@ async def _handle_streaming(
                     if content:
                         full_content_parts.append(content)
 
+        if redactor:
+            for output in redactor.flush():
+                yield f"data: {json.dumps(output)}\n\n"
+
         full_text = "".join(full_content_parts)
         if full_text.strip():
+            seconds = settings.verification_max_ms / 1000
             try:
-                llm_client = _build_llm_client(router)
-                verifier = VerificationEngine(
-                    llm_client=llm_client,
-                    web_api_key=settings.web_search_api_key,
-                    web_provider=settings.web_search_provider,
-                    cache=getattr(app.state, "cache", None),
-                    use_rescoring=settings.use_rescoring,
-                    use_nli=settings.use_nli,
+                verifier = _create_verifier(
+                    router,
+                    settings,
+                    seconds,
+                    {"stream": {k: v for k, v in request_payload.items() if k != "metadata"}},
+                    payload["model"],
                 )
-                verification = await verifier.verify(
-                    full_text,
-                    payload.get("metadata", {}).get("context", []),
-                )
-                trust_components = {
-                    "supported": verification.summary.get("supported", 0),
-                    "unsupported": verification.summary.get("unsupported", 0),
-                    "contradictions": verification.summary.get(
-                        "contradictions_found",
-                        0,
-                    ),
-                    "checklist": verification.summary.get("checklist_items", 0),
-                }
-                emit_genai_span(
-                    payload,
-                    {"choices": [{"message": {"content": full_text}}]},
-                    router.get_configured_providers()[0]
-                    .__class__.__name__.replace("Provider", "")
-                    .lower()
-                    if router.get_configured_providers()
-                    else None,
-                    trust_score=verification.trust_score,
-                    trust_components=trust_components,
-                )
-                store = _get_store()
-                await _write_trace(
-                    store,
-                    payload,
-                    {"choices": [{"message": {"content": full_text}}]},
-                    verification,
-                )
-                logger.info(
-                    "chat_completion_stream",
-                    extra={
-                        "request_id": rid,
-                        "model": validated.model,
-                        "claims": verification.summary["total_claims"],
-                    },
-                )
+                async with asyncio.timeout(seconds):
+                    verification = await verifier.verify(
+                        full_text, (request_payload.get("metadata") or {}).get("context", [])
+                    )
             except Exception:
-                logger.exception("stream_verification_failed")
+                logger.warning("stream_verification_unavailable")
+                verification = VerificationResult([], [], [], incomplete=True)
+            response = {"choices": [{"message": {"content": full_text}}]}
+            _record_verification(payload, response, verification, "chat_stream")
+            logger.info(
+                "chat_completion_stream",
+                extra={"request_id": rid, "claims": verification.summary["total_claims"]},
+            )
+            await _save_trace(request_payload, response, verification)
 
         yield "data: [DONE]\n\n"
 
@@ -380,12 +468,12 @@ async def _handle_streaming(
 async def chat_completions(request: Request, _: Annotated[None, Depends(verify_proxy_auth)]):
     settings = get_settings()
 
-    payload = await request.json()
+    payload = await _read_json_object(request)
 
     try:
         validated = validate_request(payload)
     except ValueError as exc:
-        logger.warning("validation_failed", extra={"error": str(exc)})
+        logger.warning("validation_failed")
         return JSONResponse(
             status_code=400,
             content={
@@ -401,8 +489,7 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
     router = ProviderRouter(settings)
     rate_limiter = get_rate_limiter()
     client_ip = request.client.host if request.client else "unknown"
-    auth_header = request.headers.get("authorization", "")
-    api_key = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else None
+    api_key = _bearer_key(request.headers.get("authorization")) or None
     allowed, rate_info = rate_limiter.check_limit(client_ip, api_key=api_key)
     rate_limit_headers = rate_limiter.build_headers(rate_info, allowed)
 
@@ -421,11 +508,9 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
 
     if validated.stream:
         return await _handle_streaming(
-            validated,
             upstream_payload,
+            payload,
             router,
-            rate_limiter,
-            client_ip,
             settings,
         )
 
@@ -437,9 +522,9 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
 
     provider_name = fallback_response.provider_name
     upstream_response = fallback_response.data
+    seconds = verification_window(request, settings.verification_max_ms)
 
-    llm_client = _build_llm_client(router)
-    structured = payload.get("response_format", {}).get("type") == "json_object"
+    structured = (payload.get("response_format") or {}).get("type") == "json_object"
     # Per-request policy override via headers (enables per-route / per-API-key config)
     header_policy = request.headers.get("x-verialign-policy")
     header_threshold = request.headers.get("x-verialign-block-threshold")
@@ -454,34 +539,42 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
         )
     except ValueError:
         threshold = settings.block_threshold
-    verifier = VerificationEngine(
-        llm_client=llm_client,
-        web_api_key=settings.web_search_api_key,
-        web_provider=settings.web_search_provider,
-        cache=getattr(app.state, "cache", None),
-        use_rescoring=settings.use_rescoring,
-        use_nli=settings.use_nli,
-    )
-    response_handler = ResponseHandler(
-        verifier,
-        structured_output=structured,
-        policy=policy,
-        block_threshold=threshold,
-    )
-    augmented = await response_handler.augment(upstream_response, payload)
+    try:
+        verifier = _create_verifier(
+            router,
+            settings,
+            seconds,
+            {
+                "request": {k: v for k, v in payload.items() if k != "metadata"},
+                "provider": provider_name,
+            },
+            validated.model,
+        )
+        response_handler = ResponseHandler(
+            verifier,
+            structured_output=structured,
+            policy=policy,
+            block_threshold=threshold,
+            timeout_seconds=seconds,
+        )
+        augmented = await response_handler.augment(upstream_response, payload)
+    except Exception:
+        logger.warning("chat_verification_unavailable")
+        augmented = ResponseHandler.unavailable(upstream_response, structured)
 
-    import asyncio
+    if settings.alert_webhook_url or settings.alert_slack_webhook_url:
+        choices = upstream_response.get("choices") or [{}]
+        message = choices[0].get("message") or {}
+        asyncio.create_task(
+            send_alert(
+                settings.alert_webhook_url,
+                settings.alert_slack_webhook_url,
+                message.get("content", ""),
+                augmented.verification,
+            ),
+        )
 
-    asyncio.create_task(
-        send_alert(
-            settings.alert_webhook_url,
-            settings.alert_slack_webhook_url,
-            upstream_response.get("choices", [{}])[0].get("message", {}).get("content", ""),
-            augmented.verification,
-        ),
-    )
-
-    usage = upstream_response.get("usage", {})
+    usage = upstream_response.get("usage") or {}
     cost = calculate_cost(
         validated.model,
         usage.get("prompt_tokens", 0),
@@ -493,22 +586,16 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
         with_cost = replace(augmented.verification, cost=cost)
         augmented = replace(augmented, verification=with_cost)
 
-    trust_components = {
-        "supported": augmented.verification.summary.get("supported", 0),
-        "unsupported": augmented.verification.summary.get("unsupported", 0),
-        "contradictions": augmented.verification.summary.get("contradictions_found", 0),
-        "checklist": augmented.verification.summary.get("checklist_items", 0),
-    }
-    emit_genai_span(
+    overlay = augmented.data["data" if structured else "verification"]
+    _record_verification(
         payload,
         upstream_response,
+        augmented.verification,
+        "chat",
+        overlay["policy_action"],
         provider_name,
-        trust_score=augmented.verification.trust_score,
-        trust_components=trust_components,
     )
-
-    store = _get_store()
-    await _write_trace(store, payload, augmented.data, augmented.verification)
+    await _save_trace(payload, augmented.data, augmented.verification)
 
     response_headers = dict(rate_limit_headers)
     response_headers["X-Provider"] = provider_name
@@ -519,7 +606,6 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
         "chat_completion",
         extra={
             "provider": provider_name,
-            "model": validated.model,
             "claims": augmented.verification.summary["total_claims"],
             "cost": cost,
         },
@@ -535,7 +621,7 @@ async def chat_completions(request: Request, _: Annotated[None, Depends(verify_p
 @app.post("/v1/verify")
 async def verify_text(request: Request, _: Annotated[None, Depends(verify_proxy_auth)]):
     settings = get_settings()
-    payload = await request.json()
+    payload = await _read_json_object(request)
     text = payload.get("text", "")
     context = payload.get("context", [])
 
@@ -552,29 +638,29 @@ async def verify_text(request: Request, _: Annotated[None, Depends(verify_proxy_
         )
 
     try:
-        llm_client = _build_llm_client(ProviderRouter(settings))
-        verifier = VerificationEngine(
-            llm_client=llm_client,
-            web_api_key=settings.web_search_api_key,
-            web_provider=settings.web_search_provider,
-            cache=getattr(app.state, "cache", None),
-            use_rescoring=settings.use_rescoring,
-            use_nli=settings.use_nli,
-        )
-        result = await verifier.verify(text, context)
-        return JSONResponse(content={"verification": result.to_dict()})
-    except Exception:
-        logger.exception("verify_failed")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": {
-                    "message": "Verification failed",
-                    "type": "internal_error",
-                    "status_code": 500,
-                },
+        seconds = verification_window(request, settings.verification_max_ms)
+        verifier = _create_verifier(
+            ProviderRouter(settings),
+            settings,
+            seconds,
+            {
+                "verify": {
+                    key: value for key, value in payload.items() if key not in {"text", "context"}
+                }
             },
+            payload["model"] if isinstance(payload.get("model"), str) else None,
         )
+        async with asyncio.timeout(seconds):
+            result = await verifier.verify(text, context)
+        overlay_payload = Overlay.from_result(result).model_dump(mode="json")
+        _record_verification(payload, {}, result, "verify")
+    except Exception:
+        logger.warning("direct_verification_unavailable")
+        overlay_payload = Overlay.from_result(
+            VerificationResult(claims=[], contradictions=[], checklist=[]),
+            failed=True,
+        ).model_dump(mode="json")
+    return JSONResponse(content={"verification": overlay_payload})
 
 
 @app.exception_handler(ProviderError)
@@ -584,7 +670,6 @@ async def provider_error_handler(request: Request, exc: ProviderError) -> JSONRe
         extra={
             "provider": exc.provider,
             "status_code": exc.status_code,
-            "detail": str(exc),
         },
     )
     return JSONResponse(

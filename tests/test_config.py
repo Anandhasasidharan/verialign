@@ -1,5 +1,9 @@
 """Settings parsing and wiring of v2 toggles (use_rescoring, response policy)."""
 
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
 from fastapi.testclient import TestClient
 
 from verialign.proxy import main as main_module
@@ -61,3 +65,40 @@ def test_verify_endpoint_wires_use_rescoring(tmp_path, monkeypatch) -> None:
     assert response.status_code == 200
     assert _RecordingEngine.captured, "engine was not constructed"
     assert _RecordingEngine.captured[0]["use_rescoring"] is True
+
+
+@pytest.mark.parametrize(
+    ("enabled", "override", "expected_model"),
+    [(False, "extractor", None), (True, "extractor", "extractor"), (True, None, "request")],
+)
+def test_verify_endpoint_opts_in_to_model_extraction(
+    monkeypatch, enabled, override, expected_model
+) -> None:
+    settings = Settings(
+        _env_file=None,
+        use_llm_extractor=enabled,
+        llm_extractor_model=override,
+        proxy_api_key="extractor-test",
+        use_nli=False,
+        require_proxy_auth=False,
+    )
+    model = AsyncMock(
+        return_value=SimpleNamespace(
+            data={"choices": [{"message": {"content": '{"claim_indices":[0]}'}}]}
+        )
+    )
+    router = SimpleNamespace(get_configured_providers=lambda: [object()], chat_completions=model)
+    monkeypatch.setattr(main_module, "get_settings", lambda: settings)
+    monkeypatch.setattr(main_module, "ProviderRouter", lambda _: router)
+
+    response = TestClient(app, headers={"Authorization": "Bearer extractor-test"}).post(
+        "/v1/verify", json={"text": "Ana speaks three languages.", "model": "request"}
+    )
+    assert response.status_code == 200
+    claims = response.json()["verification"]["claims"]
+    if expected_model is None:
+        model.assert_not_called()
+        assert claims == []
+    else:
+        assert model.await_args.args[0]["model"] == expected_model
+        assert claims[0]["text"] == "Ana speaks three languages."

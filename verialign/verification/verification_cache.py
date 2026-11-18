@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import time
+from threading import Lock
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,15 +23,14 @@ class VerificationCache:
         self._ttl = ttl_seconds
         self._max_size = max_size
         self._similarity_threshold = similarity_threshold
-        self._cache: dict[str, tuple[float, str, VerificationResult]] = {}
+        self._cache: dict[str, tuple[float, str, VerificationResult, bool]] = {}
         self._embeddings: dict[str, tuple[float, list[float]]] = {}
         self._embedder = None
+        self._lock = Lock()
 
     def _make_key(self, text: str, context: object | None = None) -> str:
-        raw = text
-        if context:
-            raw += json.dumps(context, sort_keys=True, default=str)
-        return hashlib.sha256(raw.encode()).hexdigest()
+        raw = json.dumps([text, context], sort_keys=True, default=str)
+        return "verialign:verification:v2:" + hashlib.sha256(raw.encode()).hexdigest()
 
     def _init_embedder(self) -> None:
         if self._embedder is not None:
@@ -47,8 +47,8 @@ class VerificationCache:
     def _ensure_embeddings(self) -> None:
         if not self._embedder or self._embedder is False:
             return
-        for key, (ts, original_text, _) in list(self._cache.items()):
-            if key not in self._embeddings:
+        for key, (ts, original_text, _, semantic) in self._cache.items():
+            if semantic and key not in self._embeddings:
                 try:
                     emb = self._embedder.encode(original_text, convert_to_numpy=True)
                     self._embeddings[key] = (ts, emb.tolist())
@@ -85,24 +85,29 @@ class VerificationCache:
         text: str,
         context: object | None = None,
     ) -> VerificationResult | None:
+        with self._lock:
+            return self._get(text, context)
+
+    def _get(self, text: str, context: object | None) -> VerificationResult | None:
         key = self._make_key(text, context)
         entry = self._cache.get(key)
         if entry is not None:
-            ts, _, result = entry
+            ts, _, result, _ = entry
             if time.monotonic() - ts <= self._ttl:
                 return result
             del self._cache[key]
+            self._embeddings.pop(key, None)
 
         if context is None:
             semantic_key = self._get_semantic_key(text)
             if semantic_key and semantic_key != key:
                 entry = self._cache.get(semantic_key)
                 if entry is not None:
-                    ts, _, result = entry
+                    ts, _, result, _ = entry
                     if time.monotonic() - ts <= self._ttl:
-                        self._cache[key] = (time.monotonic(), text, result)
                         return result
                     del self._cache[semantic_key]
+                    self._embeddings.pop(semantic_key, None)
         return None
 
     def set(
@@ -111,16 +116,12 @@ class VerificationCache:
         context: object | None,
         result: VerificationResult,
     ) -> None:
-        if len(self._cache) >= self._max_size:
-            self._evict()
-        key = self._make_key(text, context)
-        self._cache[key] = (time.monotonic(), text, result)
-        if self._embedder:
-            try:
-                emb = self._embedder.encode(text, convert_to_numpy=True)
-                self._embeddings[key] = (time.monotonic(), emb.tolist())
-            except Exception:  # noqa: BLE001, S110
-                pass
+        with self._lock:
+            key = self._make_key(text, context)
+            if key not in self._cache and len(self._cache) >= self._max_size:
+                self._evict()
+            semantic = context is None
+            self._cache[key] = (time.monotonic(), text, result, semantic)
 
     def _evict(self) -> None:
         oldest = min(self._cache.keys(), key=lambda k: self._cache[k][0])
@@ -128,8 +129,9 @@ class VerificationCache:
         self._embeddings.pop(oldest, None)
 
     def clear(self) -> None:
-        self._cache.clear()
-        self._embeddings.clear()
+        with self._lock:
+            self._cache.clear()
+            self._embeddings.clear()
 
     @property
     def size(self) -> int:

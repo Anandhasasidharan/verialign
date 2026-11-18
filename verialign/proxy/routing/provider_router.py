@@ -354,7 +354,6 @@ class ProviderRouter:
             logger.info(
                 "cost_routing",
                 extra={
-                    "model": model,
                     "chosen": chosen.get_provider_name(),
                     "costs": {p.get_provider_name(): c for c, p in candidates},
                 },

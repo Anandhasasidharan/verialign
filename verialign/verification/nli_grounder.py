@@ -1,6 +1,11 @@
 import logging
+from functools import lru_cache
+
+from verialign.verification.workers import BoundedExecutor
 
 logger = logging.getLogger(__name__)
+_nli_worker = BoundedExecutor("verialign-nli", workers=1, capacity=2)
+_MAX_PAIRS = 64
 
 
 class NLIGrounder:
@@ -14,6 +19,7 @@ class NLIGrounder:
         self._model = None
         self._tokenizer = None
         self._device = "cpu"
+        self._load_failed = False
 
     def _lazy_init(self) -> None:
         if self._model is not None:
@@ -33,25 +39,33 @@ class NLIGrounder:
             logger.warning("nli_transformers_not_available")
             self._model = False
         except Exception:
-            logger.exception("nli_model_load_failed")
+            logger.warning("nli_model_load_failed")
             self._model = False
+            self._load_failed = True
 
     def is_available(self) -> bool:
         self._lazy_init()
-        return self._model is not None
+        return self._model is not None and self._model is not False
 
     async def score(self, claim: str, context_chunks: list[str]) -> list[dict]:
-        self._lazy_init()
-        if self._model is None:
-            return []
+        return (await self.score_batch([claim], context_chunks))[0]
 
-        if not context_chunks:
-            return []
+    async def score_batch(self, claims: list[str], context_chunks: list[str]) -> list[list[dict]]:
+        if not claims or not context_chunks:
+            return [[] for _ in claims]
+        return await _nli_worker.run(self._score_batch, claims, context_chunks)
 
+    def _score_batch(self, claims: list[str], context_chunks: list[str]) -> list[list[dict]]:
+        if not self.is_available():
+            if self._load_failed:
+                raise RuntimeError("NLI model unavailable")
+            return [[] for _ in claims]
+        if len(claims) * len(context_chunks) > _MAX_PAIRS:
+            raise TimeoutError("NLI batch exceeds its pair limit")
         try:
             import torch
 
-            pairs = [(claim, chunk) for chunk in context_chunks]
+            pairs = [(chunk, claim) for claim in claims for chunk in context_chunks]
             inputs = self._tokenizer(
                 pairs,
                 padding=True,
@@ -64,21 +78,26 @@ class NLIGrounder:
                 outputs = self._model(**inputs)
                 probs = torch.nn.functional.softmax(outputs.logits, dim=1)
 
-            results = []
-            for i, _chunk in enumerate(context_chunks):
-                prob = probs[i]
-                results.append(
+            indices = {
+                label.lower(): int(index) for index, label in self._model.config.id2label.items()
+            }
+            width = len(context_chunks)
+            return [
+                [
                     {
-                        "chunk_index": i,
-                        "entailment": round(prob[0].item(), 4),
-                        "neutral": round(prob[1].item(), 4),
-                        "contradiction": round(prob[2].item(), 4),
-                    },
-                )
-            return results
-        except Exception:
-            logger.exception("nli_scoring_failed")
-            return []
+                        "chunk_index": chunk,
+                        **{
+                            label: round(probs[offset + chunk][indices[label]].item(), 4)
+                            for label in ("entailment", "neutral", "contradiction")
+                        },
+                    }
+                    for chunk in range(width)
+                ]
+                for offset in range(0, len(pairs), width)
+            ]
+        except Exception as exc:
+            logger.warning("nli_scoring_failed")
+            raise RuntimeError("NLI inference failed") from exc
 
     async def ground(
         self,
@@ -86,11 +105,15 @@ class NLIGrounder:
         context_chunks: list[str],
         threshold: float | None = None,
     ) -> tuple[str, float, list[dict]]:
-        scores = await self.score(claim, context_chunks)
+        return self.interpret(await self.score(claim, context_chunks), threshold)
+
+    def interpret(
+        self, scores: list[dict], threshold: float | None = None
+    ) -> tuple[str, float, list[dict]]:
         if not scores:
             return "unclear", 0.0, []
 
-        threshold = threshold or self._threshold
+        threshold = self._threshold if threshold is None else threshold
         max_contradiction = max(s["contradiction"] for s in scores)
         max_entailment = max(s["entailment"] for s in scores)
 
@@ -101,3 +124,8 @@ class NLIGrounder:
             return "supported", max_entailment, scores
 
         return "unclear", max_entailment, scores
+
+
+@lru_cache(maxsize=1)
+def shared_nli_grounder() -> NLIGrounder:
+    return NLIGrounder()

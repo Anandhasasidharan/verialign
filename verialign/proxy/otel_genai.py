@@ -20,12 +20,16 @@ def emit_genai_span(
     provider: str | None = None,
     trust_score: float | None = None,
     trust_components: dict | None = None,
+    *,
+    operation: str = "chat",
+    tracer=None,
 ) -> None:
-    if not _otel_available or not _tracer:
+    tracer = tracer if tracer is not None else (_tracer if _otel_available else None)
+    if tracer is None:
         return
 
     model = response_payload.get("model") or request_payload.get("model", "")
-    usage = response_payload.get("usage", {})
+    usage = response_payload.get("usage") or {}
     choices = response_payload.get("choices", [])
 
     finish_reasons = []
@@ -34,8 +38,9 @@ def emit_genai_span(
         if fr:
             finish_reasons.append(fr)
 
-    with _tracer.start_as_current_span("gen_ai.chat") as span:
+    with tracer.start_as_current_span(f"gen_ai.{operation}") as span:
         span.set_attribute("gen_ai.system", provider or "unknown")
+        span.set_attribute("gen_ai.operation.name", operation)
         span.set_attribute("gen_ai.request.model", model)
         span.set_attribute("gen_ai.response.model", model)
 

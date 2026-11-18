@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
+from verialign.privacy import redact_pii
 from verialign.proxy.config import get_settings
 from verialign.verification.models import VerificationResult
 
@@ -17,18 +18,56 @@ SENSITIVE_PATTERNS = [
     (re.compile(r"(?i)sk-[A-Za-z0-9]{32,}"), "[REDACTED]"),
     (re.compile(r"(?i)pk-[A-Za-z0-9]{32,}"), "[REDACTED]"),
 ]
+_SENSITIVE_KEYS = {
+    "authorization",
+    "proxy_authorization",
+    "api_key",
+    "x_api_key",
+    "x_admin_key",
+    "password",
+    "secret",
+    "token",
+    "access_token",
+    "refresh_token",
+}
 
 
 def redact_sensitive_data(obj: Any) -> Any:
+    return redact_pii(_redact_credentials(obj))
+
+
+def _redact_credentials(obj: Any) -> Any:
     if isinstance(obj, str):
+        if obj.lstrip().startswith(("{", "[")):
+            try:
+                parsed = json.loads(obj)
+            except ValueError:
+                pass
+            else:
+                if isinstance(parsed, (dict, list)):
+                    masked = _redact_credentials(parsed)
+                    return json.dumps(masked, ensure_ascii=False) if masked != parsed else obj
         redacted = obj
         for pattern, replacement in SENSITIVE_PATTERNS:
             redacted = pattern.sub(replacement, redacted)
         return redacted
     if isinstance(obj, dict):
-        return {k: redact_sensitive_data(v) for k, v in obj.items()}
+        result = {}
+        for key, value in obj.items():
+            field = str(key).lower().replace("-", "_")
+            if (
+                field == "authorization"
+                and isinstance(value, str)
+                and value.lower().startswith("bearer ")
+            ):
+                result[key] = "Bearer [REDACTED]"
+            else:
+                result[key] = (
+                    "[REDACTED]" if field in _SENSITIVE_KEYS else _redact_credentials(value)
+                )
+        return result
     if isinstance(obj, list):
-        return [redact_sensitive_data(item) for item in obj]
+        return [_redact_credentials(item) for item in obj]
     return obj
 
 
@@ -54,6 +93,8 @@ class TraceStore:
         response_to_store = (
             redact_sensitive_data(response_payload) if self.redact else response_payload
         )
+        report = verification.to_dict()
+        model = str(request_payload.get("model", ""))
 
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
@@ -63,10 +104,10 @@ class TraceStore:
                 """,
                 (
                     datetime.now(timezone.utc).isoformat(),
-                    str(request_payload.get("model", "")),
+                    redact_sensitive_data(model) if self.redact else model,
                     json.dumps(request_to_store),
                     json.dumps(response_to_store),
-                    json.dumps(verification.to_dict()),
+                    json.dumps(redact_sensitive_data(report) if self.redact else report),
                 ),
             )
 
@@ -98,7 +139,7 @@ class TraceStore:
                     "summary": verification.get("summary", {}),
                 },
             )
-        return traces
+        return redact_sensitive_data(traces) if self.redact else traces
 
     def _init_db(self) -> None:
         with sqlite3.connect(self.db_path) as conn:

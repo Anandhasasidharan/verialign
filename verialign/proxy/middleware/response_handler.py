@@ -1,7 +1,12 @@
+import asyncio
+import logging
 from dataclasses import dataclass, field
 
 from verialign.verification.engine import VerificationEngine
 from verialign.verification.models import VerificationResult
+from verialign.verification.overlay import Overlay, PolicyAction
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -21,11 +26,13 @@ class ResponseHandler:
         structured_output: bool = False,
         policy: str = "pass-through",
         block_threshold: float = 0.5,
+        timeout_seconds: float | None = None,
     ) -> None:
         self.verifier = verifier or VerificationEngine()
         self.structured_output = structured_output
         self.policy = policy if policy in self.VALID_POLICIES else "pass-through"
         self.block_threshold = block_threshold
+        self.timeout_seconds = timeout_seconds
 
     def _extract_tool_calls(self, request_payload: dict) -> list[dict] | None:
         # Prefer explicit metadata.tool_calls / tool_results
@@ -81,11 +88,78 @@ class ResponseHandler:
         upstream_response: dict,
         request_payload: dict,
     ) -> AugmentedResponse:
+        try:
+            async with asyncio.timeout(self.timeout_seconds):
+                verification = await self._verify(upstream_response, request_payload)
+            trust_score = verification.trust_score
+            action: PolicyAction = "pass-through"
+            if (
+                not verification.incomplete
+                and trust_score is not None
+                and trust_score < self.block_threshold
+            ):
+                if self.policy == "block":
+                    action = "block"
+                elif self.policy == "warn":
+                    action = "warn"
+            overlay = Overlay.from_result(verification, action)
+            overlay_payload = overlay.model_dump(mode="json")
+        except Exception:
+            logger.warning("chat_verification_unavailable")
+            return self.unavailable(upstream_response, self.structured_output)
+
+        response = dict(upstream_response)
+        overlay_key = "data" if self.structured_output else "verification"
+        response[overlay_key] = overlay_payload
+
+        if overlay.policy_action == "block":
+            return AugmentedResponse(
+                data={
+                    "error": {
+                        "message": f"Response blocked by verification policy: trust_score {overlay.trust_score:.3f} below threshold {self.block_threshold:.3f}",
+                        "type": "verification_blocked",
+                        "status_code": 422,
+                    },
+                    overlay_key: overlay_payload,
+                },
+                verification=verification,
+                status_code=422,
+                headers={"X-VeriAlign-Blocked": "true"},
+            )
+
+        if overlay.policy_action == "warn":
+            caveat = f"[VeriAlign warning: trust_score {overlay.trust_score:.3f} below threshold {self.block_threshold:.3f} — verification recommended] "
+            choices = response.get("choices")
+            if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+                msg = choices[0].get("message", {})
+                if isinstance(msg, dict) and isinstance(msg.get("content"), str):
+                    response["choices"] = [
+                        {**choices[0], "message": {**msg, "content": caveat + msg["content"]}},
+                        *choices[1:],
+                    ]
+            return AugmentedResponse(
+                data=response,
+                verification=verification,
+                headers={"X-VeriAlign-Warning": "true"},
+            )
+
+        return AugmentedResponse(data=response, verification=verification)
+
+    @staticmethod
+    def unavailable(upstream_response: dict, structured_output: bool) -> AugmentedResponse:
+        result = VerificationResult([], [], [], incomplete=True)
+        overlay_key = "data" if structured_output else "verification"
+        return AugmentedResponse(
+            {**upstream_response, overlay_key: Overlay.from_result(result).model_dump(mode="json")},
+            result,
+        )
+
+    async def _verify(self, upstream_response: dict, request_payload: dict) -> VerificationResult:
         assistant_text = self._extract_assistant_text(upstream_response)
-        context = request_payload.get("metadata", {}).get("context", [])
+        context = (request_payload.get("metadata") or {}).get("context", [])
         tool_calls = self._extract_tool_calls(request_payload)
         try:
-            verification = await self.verifier.verify(
+            return await self.verifier.verify(
                 assistant_text,
                 context,
                 response_data=upstream_response,
@@ -93,71 +167,12 @@ class ResponseHandler:
             )
         except TypeError as exc:
             if "tool_calls" in str(exc):
-                verification = await self.verifier.verify(
+                return await self.verifier.verify(
                     assistant_text,
                     context,
                     response_data=upstream_response,
                 )
-            else:
-                raise
-
-        response = dict(upstream_response)
-        v_dict = verification.to_dict()
-
-        # Phase 0 fix: structured_output branches were identical. Now they differ:
-        # - structured_output=True: nest verification under `data` key to avoid
-        #   polluting the top-level JSON object that a structured-output client
-        #   expects to be schema-constrained.
-        # - otherwise: top-level `verification` (inline-verification headline feature)
-        if self.structured_output:
-            response["data"] = v_dict
-        else:
-            response["verification"] = v_dict
-
-        # Policy handling (Phase 2)
-        trust_score = verification.trust_score
-
-        # Only apply policy when trust_score is available
-        should_evaluate = trust_score is not None
-
-        if self.policy == "block" and should_evaluate and trust_score < self.block_threshold:
-            blocked = {
-                "error": {
-                    "message": f"Response blocked by verification policy: trust_score {trust_score:.3f} below threshold {self.block_threshold:.3f}",
-                    "type": "verification_blocked",
-                    "status_code": 422,
-                },
-                "verification": v_dict,
-            }
-            # Preserve structured nesting if requested
-            if self.structured_output:
-                blocked = {"error": blocked["error"], "data": v_dict}
-            return AugmentedResponse(
-                data=blocked,
-                verification=verification,
-                status_code=422,
-                headers={"X-VeriAlign-Blocked": "true"},
-            )
-
-        if self.policy == "warn" and should_evaluate and trust_score < self.block_threshold:
-            # Inject visible caveat into content and set warning header
-            caveat = f"[VeriAlign warning: trust_score {trust_score:.3f} below threshold {self.block_threshold:.3f} — verification recommended] "
-            choices = response.get("choices")
-            if isinstance(choices, list) and choices and isinstance(choices[0], dict):
-                msg = choices[0].get("message", {})
-                if isinstance(msg, dict) and isinstance(msg.get("content"), str):
-                    response["choices"] = [dict(c) for c in choices]
-                    response["choices"][0] = dict(choices[0])
-                    response["choices"][0]["message"] = dict(msg)
-                    response["choices"][0]["message"]["content"] = caveat + msg["content"]
-            return AugmentedResponse(
-                data=response,
-                verification=verification,
-                status_code=200,
-                headers={"X-VeriAlign-Warning": "true"},
-            )
-
-        return AugmentedResponse(data=response, verification=verification)
+            raise
 
     def _extract_assistant_text(self, response: dict) -> str:
         choices = response.get("choices") or []
