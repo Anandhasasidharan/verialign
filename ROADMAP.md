@@ -26,6 +26,7 @@ Verification
 - Claim-conditioned re-scoring (opt-in `VERIALIGN_USE_RESCORING`, closes the NLI warrant gap)
 - Tool-call grounding (claims vs `metadata.tool_calls` / `role=tool` messages)
 - Contradiction detection (negation, antonym, numeric)
+- Refutation citations from NLI and explicit keyword matches
 - Confidence scoring (logprobs + heuristic fallback)
 - Aggregate `trust_score` + verification checklist
 - Reliability calibration report (`docs/verification-calibration.md`)
@@ -37,6 +38,7 @@ Production hardening
 - Safety middleware: PII redaction (Luhn-checked cards), jailbreak, toxicity (word-boundary)
 - Trace persistence (SQLite / Postgres) with secret redaction
 - Admin API, Prometheus `/metrics`, structured logging, Sentry, OpenTelemetry
+- OpenTelemetry trust-score histogram and AgentOps trust-score SLI export
 - Docker Compose (demo + prod with Caddy TLS) + Alembic migrations
 - GitHub Actions: tests (3.11/3.12), benchmarks, ruff, gitleaks secret scan, package build check
 
@@ -52,5 +54,6 @@ Packaging & tooling
 - Let the TUI/CLI trace reader use `VERIALIGN_DATABASE_URL` (Postgres) instead of SQLite files only
 - Widen the calibration benchmark (compound claims, numeric + tool contradictions)
   and fail CI when ECE regresses > 0.05
-- Expose trust scores to a downstream SLO/agent-ops sink, reusing the tool-grounding primitive
+- Validate trust calibration on representative production traffic and evaluate live retrieval
+- Validate hosted AgentOps ingestion after the receiver's PostgreSQL timestamp bindings are fixed
 - Add more tool-call schemas for agentic frameworks as real usage appears

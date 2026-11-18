@@ -1,0 +1,130 @@
+{
+  "dataset_sha256": "ca959df00d9402cd0fa26d9a83550e625e793ce8eec27e8b95db613652a079a7",
+  "source_sha256": "7dce5e32b05e30beb63ca44972f3873719ea3aa61f009cf60d0034dd994357f7",
+  "profile": "offline-keyword-v1",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "sqlite": "3.45.1",
+    "fastapi": "0.163.2",
+    "starlette": "1.10.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.14.3"
+  },
+  "items": 300,
+  "labels": {
+    "verified": {
+      "tp": 44,
+      "fp": 31,
+      "fn": 56,
+      "support": 100,
+      "precision": 0.586667,
+      "recall": 0.44,
+      "f1": 0.502857
+    },
+    "contradicted": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 100,
+      "support": 100,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "unverifiable": {
+      "tp": 0,
+      "fp": 63,
+      "fn": 100,
+      "support": 100,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "abstention": {
+      "tp": 63,
+      "fp": 67,
+      "fn": 37,
+      "support": 100,
+      "precision": 0.484615,
+      "recall": 0.63,
+      "f1": 0.547826
+    }
+  },
+  "confusion": {
+    "verified": {
+      "missing_claim": 32,
+      "unverifiable": 24,
+      "verified": 44
+    },
+    "contradicted": {
+      "missing_claim": 26,
+      "no_source": 4,
+      "unverifiable": 39,
+      "verified": 31
+    },
+    "unverifiable": {
+      "missing_claim": 37,
+      "no_source": 63
+    }
+  },
+  "trust_calibration": {
+    "ece": 0.172615,
+    "scored": 200,
+    "excluded_unknown_truth": 100,
+    "excluded_missing_score": 0,
+    "bins": [
+      {
+        "lower": 0.0,
+        "upper": 0.2,
+        "count": 25,
+        "mean_trust": 0.1254,
+        "actual_correctness": 0.32
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.4,
+        "count": 0,
+        "mean_trust": null,
+        "actual_correctness": null
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.6,
+        "count": 97,
+        "mean_trust": 0.518691,
+        "actual_correctness": 0.484536
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.8,
+        "count": 0,
+        "mean_trust": null,
+        "actual_correctness": null
+      },
+      {
+        "lower": 0.8,
+        "upper": 1.0,
+        "count": 78,
+        "mean_trust": 0.914679,
+        "actual_correctness": 0.576923
+      }
+    ]
+  },
+  "latency": {
+    "transport": "in-process ASGI, full proxy vs direct upstream, distinct claims per pair",
+    "samples_per_arm": 100,
+    "warmup_per_arm": 10,
+    "raw": {
+      "p50_ms": 4.636458,
+      "p95_ms": 6.253378
+    },
+    "proxy": {
+      "p50_ms": 27.549869,
+      "p95_ms": 32.356962
+    },
+    "paired_overhead": {
+      "p50_ms": 22.628638,
+      "p95_ms": 26.982294
+    }
+  }
+}

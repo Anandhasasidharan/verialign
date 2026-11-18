@@ -1,0 +1,56 @@
+{
+  "transport": "loopback HTTP, single Uvicorn worker, demo upstream, SQLite",
+  "concurrency": 12,
+  "requests_per_arm": 150,
+  "warmups_per_arm": 12,
+  "off": {
+    "p50_ms": 289.358317,
+    "p95_ms": 628.488222,
+    "requests_per_second": 34.386,
+    "http_status": {
+      "200": 150
+    },
+    "verification_status": {
+      "complete": 150
+    }
+  },
+  "healthy": {
+    "p50_ms": 323.86277,
+    "p95_ms": 1046.132585,
+    "requests_per_second": 27.828,
+    "http_status": {
+      "200": 150
+    },
+    "verification_status": {
+      "complete": 150
+    }
+  },
+  "outage": {
+    "p50_ms": 476.851769,
+    "p95_ms": 741.584564,
+    "requests_per_second": 23.778,
+    "http_status": {
+      "200": 150
+    },
+    "verification_status": {
+      "complete": 150
+    }
+  },
+  "recovery": {
+    "p50_ms": 261.475125,
+    "p95_ms": 631.028883,
+    "requests_per_second": 33.994,
+    "http_status": {
+      "200": 150
+    },
+    "verification_status": {
+      "complete": 150
+    }
+  },
+  "collector_requests": {
+    "/v1/metrics HTTP 200": 52,
+    "/v1/metrics HTTP 503": 14,
+    "/v1/traces HTTP 200": 49,
+    "/v1/traces HTTP 503": 18
+  }
+}

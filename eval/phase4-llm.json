@@ -1,0 +1,229 @@
+{
+  "checkpoint": "Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775",
+  "dataset_sha256": "ca959df00d9402cd0fa26d9a83550e625e793ce8eec27e8b95db613652a079a7",
+  "device": "CPU",
+  "torch_threads": 2,
+  "timeout_seconds": 16.0,
+  "model_responses": {
+    "calls": 25,
+    "invalid_json_or_schema": 6,
+    "out_of_range": 11,
+    "valid_selection": 8,
+    "nonempty_selection": 8
+  },
+  "completed_model_latency": {
+    "p50_ms": 5301.415315,
+    "p95_ms": 6998.620795
+  },
+  "rules": {
+    "items": 300,
+    "labels": {
+      "verified": {
+        "tp": 61,
+        "fp": 38,
+        "fn": 39,
+        "support": 100,
+        "precision": 0.616162,
+        "recall": 0.61,
+        "f1": 0.613065
+      },
+      "contradicted": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 100,
+        "support": 100,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "unverifiable": {
+        "tp": 0,
+        "fp": 81,
+        "fn": 100,
+        "support": 100,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "abstention": {
+        "tp": 89,
+        "fp": 85,
+        "fn": 11,
+        "support": 100,
+        "precision": 0.511494,
+        "recall": 0.89,
+        "f1": 0.649635
+      }
+    },
+    "confusion": {
+      "verified": {
+        "missing_claim": 7,
+        "unverifiable": 32,
+        "verified": 61
+      },
+      "contradicted": {
+        "missing_claim": 9,
+        "no_source": 4,
+        "unverifiable": 49,
+        "verified": 38
+      },
+      "unverifiable": {
+        "missing_claim": 11,
+        "no_source": 89
+      }
+    },
+    "trust_calibration": {
+      "ece": 0.228445,
+      "scored": 200,
+      "excluded_unknown_truth": 100,
+      "excluded_missing_score": 0,
+      "bins": [
+        {
+          "lower": 0.0,
+          "upper": 0.2,
+          "count": 28,
+          "mean_trust": 0.125429,
+          "actual_correctness": 0.321429
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.4,
+          "count": 0,
+          "mean_trust": null,
+          "actual_correctness": null
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.6,
+          "count": 70,
+          "mean_trust": 0.537714,
+          "actual_correctness": 0.428571
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.8,
+          "count": 1,
+          "mean_trust": 0.662,
+          "actual_correctness": 1.0
+        },
+        {
+          "lower": 0.8,
+          "upper": 1.0,
+          "count": 101,
+          "mean_trust": 0.913099,
+          "actual_correctness": 0.594059
+        }
+      ]
+    }
+  },
+  "rules_with_llm": {
+    "items": 300,
+    "labels": {
+      "verified": {
+        "tp": 61,
+        "fp": 38,
+        "fn": 39,
+        "support": 100,
+        "precision": 0.616162,
+        "recall": 0.61,
+        "f1": 0.613065
+      },
+      "contradicted": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 100,
+        "support": 100,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "unverifiable": {
+        "tp": 0,
+        "fp": 82,
+        "fn": 100,
+        "support": 100,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "abstention": {
+        "tp": 91,
+        "fp": 86,
+        "fn": 9,
+        "support": 100,
+        "precision": 0.514124,
+        "recall": 0.91,
+        "f1": 0.65704
+      }
+    },
+    "confusion": {
+      "verified": {
+        "missing_claim": 6,
+        "unverifiable": 33,
+        "verified": 61
+      },
+      "contradicted": {
+        "missing_claim": 9,
+        "no_source": 4,
+        "unverifiable": 49,
+        "verified": 38
+      },
+      "unverifiable": {
+        "missing_claim": 9,
+        "no_source": 91
+      }
+    },
+    "trust_calibration": {
+      "ece": 0.22934,
+      "scored": 200,
+      "excluded_unknown_truth": 100,
+      "excluded_missing_score": 0,
+      "bins": [
+        {
+          "lower": 0.0,
+          "upper": 0.2,
+          "count": 28,
+          "mean_trust": 0.125429,
+          "actual_correctness": 0.321429
+        },
+        {
+          "lower": 0.2,
+          "upper": 0.4,
+          "count": 0,
+          "mean_trust": null,
+          "actual_correctness": null
+        },
+        {
+          "lower": 0.4,
+          "upper": 0.6,
+          "count": 70,
+          "mean_trust": 0.537957,
+          "actual_correctness": 0.428571
+        },
+        {
+          "lower": 0.6,
+          "upper": 0.8,
+          "count": 1,
+          "mean_trust": 0.662,
+          "actual_correctness": 1.0
+        },
+        {
+          "lower": 0.8,
+          "upper": 1.0,
+          "count": 101,
+          "mean_trust": 0.914703,
+          "actual_correctness": 0.594059
+        }
+      ]
+    }
+  },
+  "delta_from_rules": {
+    "f1": {
+      "verified": 0.0,
+      "contradicted": 0.0,
+      "unverifiable": 0.0,
+      "abstention": 0.007405
+    },
+    "ece": 0.000895
+  }
+}

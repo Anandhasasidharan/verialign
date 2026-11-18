@@ -1,0 +1,159 @@
+{
+  "dataset_sha256": "ca959df00d9402cd0fa26d9a83550e625e793ce8eec27e8b95db613652a079a7",
+  "source_sha256": "4b0f978d5384d347c521e28644ee0bb11e9704decf1ede43bc2afd0f7814254c",
+  "profile": "offline-keyword-v1",
+  "environment": {
+    "python": "3.12.3",
+    "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "sqlite": "3.45.1",
+    "fastapi": "0.163.2",
+    "starlette": "1.10.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.14.3"
+  },
+  "items": 300,
+  "labels": {
+    "verified": {
+      "tp": 61,
+      "fp": 38,
+      "fn": 39,
+      "support": 100,
+      "precision": 0.616162,
+      "recall": 0.61,
+      "f1": 0.613065
+    },
+    "contradicted": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 100,
+      "support": 100,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "unverifiable": {
+      "tp": 0,
+      "fp": 81,
+      "fn": 100,
+      "support": 100,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0
+    },
+    "abstention": {
+      "tp": 89,
+      "fp": 85,
+      "fn": 11,
+      "support": 100,
+      "precision": 0.511494,
+      "recall": 0.89,
+      "f1": 0.649635
+    }
+  },
+  "confusion": {
+    "verified": {
+      "missing_claim": 7,
+      "unverifiable": 32,
+      "verified": 61
+    },
+    "contradicted": {
+      "missing_claim": 9,
+      "no_source": 4,
+      "unverifiable": 49,
+      "verified": 38
+    },
+    "unverifiable": {
+      "missing_claim": 11,
+      "no_source": 89
+    }
+  },
+  "trust_calibration": {
+    "ece": 0.228445,
+    "scored": 200,
+    "excluded_unknown_truth": 100,
+    "excluded_missing_score": 0,
+    "bins": [
+      {
+        "lower": 0.0,
+        "upper": 0.2,
+        "count": 28,
+        "mean_trust": 0.125429,
+        "actual_correctness": 0.321429
+      },
+      {
+        "lower": 0.2,
+        "upper": 0.4,
+        "count": 0,
+        "mean_trust": null,
+        "actual_correctness": null
+      },
+      {
+        "lower": 0.4,
+        "upper": 0.6,
+        "count": 70,
+        "mean_trust": 0.537714,
+        "actual_correctness": 0.428571
+      },
+      {
+        "lower": 0.6,
+        "upper": 0.8,
+        "count": 1,
+        "mean_trust": 0.662,
+        "actual_correctness": 1.0
+      },
+      {
+        "lower": 0.8,
+        "upper": 1.0,
+        "count": 101,
+        "mean_trust": 0.913099,
+        "actual_correctness": 0.594059
+      }
+    ]
+  },
+  "latency": {
+    "transport": "in-process ASGI, full proxy vs direct upstream, distinct claims per pair",
+    "samples_per_arm": 100,
+    "warmup_per_arm": 10,
+    "raw": {
+      "p50_ms": 3.524232,
+      "p95_ms": 4.230527
+    },
+    "proxy": {
+      "p50_ms": 24.749,
+      "p95_ms": 26.634234
+    },
+    "paired_overhead": {
+      "p50_ms": 21.336521,
+      "p95_ms": 23.00426
+    }
+  },
+  "delta_from_baseline": {
+    "labels": {
+      "verified": {
+        "precision": 0.029495,
+        "recall": 0.17,
+        "f1": 0.110208
+      },
+      "contradicted": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "unverifiable": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0
+      },
+      "abstention": {
+        "precision": 0.026879,
+        "recall": 0.26,
+        "f1": 0.101809
+      }
+    },
+    "ece": 0.05583,
+    "paired_overhead_ms": {
+      "p50_ms": -1.292117,
+      "p95_ms": -3.978034
+    }
+  }
+}
